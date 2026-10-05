@@ -7,9 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { EmployeeService } from '../../services/employee.service';
-import { Company, CompanyListResponse } from '../../../company/models/company';
-import { CompanyService } from '../../../company/service/company.service';
 import { Person } from '../../models/person';
+import { ROLE_LABELS } from '../../../../core/models/auth.model';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
 
@@ -30,21 +29,18 @@ import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared
 })
 export class EmployeeListComponent implements OnInit, OnDestroy {
   private employeeService = inject(EmployeeService);
-  private companyService = inject(CompanyService);
 
   employees: Person[] = [];
   totalCount = 0;
-  displayedColumns: string[] = ['name', 'company', 'phone', 'type', 'code', 'is_active', 'actions'];
+  displayedColumns: string[] = ['name', 'company', 'phone', 'type', 'role', 'code', 'is_active', 'actions'];
   pageIndex = 0;
   pageSize = 10;
   pageSizeOptions = [5, 10, 25, 50];
-  private companyNamesById = new Map<number, string>();
 
   private destroy$ = new Subject<void>();
   private pageChange$ = new Subject<PageEvent>();
 
   ngOnInit(): void {
-    this.loadCompanies();
     this.loadEmployees();
 
     this.pageChange$
@@ -54,17 +50,6 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
         this.pageSize = event.pageSize;
         this.loadEmployees(this.pageIndex, this.pageSize);
       });
-  }
-
-  loadCompanies(): void {
-    this.companyService.getAll().subscribe({
-      next: (response) => {
-        this.companyNamesById = new Map(
-          this.getCompaniesFromResponse(response).map(company => [company.id, company.name])
-        );
-      },
-      error: (err) => console.error('Erro ao carregar empresas:', err)
-    });
   }
 
   loadEmployees(pageIndex: number = this.pageIndex, pageSize: number = this.pageSize): void {
@@ -108,27 +93,21 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
     return labels[normalizedType] ?? '-';
   }
 
+  getRoleLabel(role: Person['role']): string {
+    return role ? ROLE_LABELS[role] : '-';
+  }
+
   isEmployeeType(type: Person['type'] | string | null | undefined): boolean {
     return String(type ?? '').trim().toUpperCase() === 'EMPLOYEE';
   }
 
-  getCompanyLabel(company: Person['company']): string {
+  getCompanyLabel(employee: Person): string {
+    if (employee.company_name) return employee.company_name;
+
+    const company = employee.company;
     if (!company) return '-';
-
-    if (typeof company === 'object') {
-      return company.name || company.company_name || '-';
-    }
-
-    if (typeof company === 'number') {
-      return this.companyNamesById.get(company) ?? '-';
-    }
-
-    return String(company);
-  }
-
-  private getCompaniesFromResponse(response: CompanyListResponse | Company[]): Company[] {
-    if (Array.isArray(response)) return response;
-    return response.value ?? response.results ?? [];
+    if (typeof company === 'object') return company.name || company.company_name || '-';
+    return '-';
   }
 
   private getEmployeesFromResponse(response: any): Person[] {

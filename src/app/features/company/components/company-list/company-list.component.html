@@ -29,6 +29,9 @@
     <ng-container matColumnDef="actions">
       <th mat-header-cell *matHeaderCellDef>Ações</th>
       <td mat-cell *matCellDef="let company">
+        <button mat-icon-button (click)="manageGestor(company)" title="Definir gestor" aria-label="Definir gestor">
+          <mat-icon>manage_accounts</mat-icon>
+        </button>
         <button mat-icon-button [routerLink]="[company.id, 'editar']">
           <mat-icon>edit</mat-icon>
         </button>

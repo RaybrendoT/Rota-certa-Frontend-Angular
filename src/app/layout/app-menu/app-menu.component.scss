@@ -78,6 +78,10 @@
   font-size: 0.9rem;
 }
 
+.logout-button {
+  color: #dbeafe;
+}
+
 /* ====================== LAYOUT ====================== */
 .layout-container {
   height: calc(100vh - 64px);
@@ -130,6 +134,49 @@
   font-size: 20px;
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+// O mat-list-item projeta ícone e rótulo inline num wrapper interno (o gap do .menu-item
+// não alcança), então o espaçamento fica no próprio rótulo.
+.menu-label {
+  margin-left: 12px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* ====================== MENU RECOLHIDO ====================== */
+.sidebar {
+  transition: width 0.2s ease;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  width: 72px;
+
+  .menu-title {
+    // Mantém o espaçamento entre seções, mas troca o texto por uma linha discreta.
+    font-size: 0;
+    padding: 0;
+    margin: 0 12px 8px;
+    border-top: 1px solid #1e2937;
+  }
+
+  .menu-section:first-child .menu-title {
+    border-top: none;
+  }
+
+  .menu-label,
+  .menu-external {
+    display: none;
+  }
+
+  .menu-item {
+    justify-content: center;
+    padding: 10px 0;
+    margin: 2px 4px;
+  }
 }
 
 /* ====================== CONTEÚDO ====================== */
@@ -139,4 +186,12 @@
   height: 100%;
   overflow-y: auto;
   color: #e2e8f0;
+}
+
+.menu-item mat-icon.menu-external {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  opacity: 0.6;
 }

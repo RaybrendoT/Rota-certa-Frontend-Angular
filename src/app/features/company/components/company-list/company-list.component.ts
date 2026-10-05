@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,8 @@ import { MatTableModule } from '@angular/material/table';
 import { Subject } from 'rxjs';
 import { Company } from '../../models/company';
 import { CompanyService } from '../../service/company.service';
+import { EmployeeService } from '../../../employee/services/employee.service';
+import { Person } from '../../../employee/models/person';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
 
 @Component({
@@ -28,6 +30,8 @@ import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared
 })
 export class CompanyListComponent implements OnInit, OnDestroy {
   private companyService = inject(CompanyService);
+  private employeeService = inject(EmployeeService);
+  private router = inject(Router);
   private readonly destroy$ = new Subject<void>();
 
   companies: Company[] = [];
@@ -68,6 +72,24 @@ export class CompanyListComponent implements OnInit, OnDestroy {
     this.pageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
     this.loadCompanies(this.pageIndex, this.pageSize);
+  }
+
+  /** Já tem gestor? edita quem já existe. Senão, abre a criação com a empresa pré-selecionada. */
+  manageGestor(company: Company): void {
+    this.employeeService.getAll({ company_id: company.id, role: 'MANAGER' }).subscribe({
+      next: (response) => {
+        const [existing] = extractPaginatedItems<Person>(response);
+        if (existing?.id) {
+          this.router.navigate(['/gestores', existing.id, 'editar']);
+        } else {
+          this.router.navigate(['/gestores/novo'], { queryParams: { company_id: company.id } });
+        }
+      },
+      error: (err) => {
+        console.error('Erro ao verificar gestor da empresa:', err);
+        this.router.navigate(['/gestores/novo'], { queryParams: { company_id: company.id } });
+      }
+    });
   }
 
   deleteCompany(id: number): void {

@@ -13,12 +13,7 @@
 
       <mat-form-field>
         <mat-label>Empresa</mat-label>
-        <input matInput formControlName="company" [matAutocomplete]="companyAutocomplete" required>
-        <mat-autocomplete #companyAutocomplete="matAutocomplete">
-          @for (company of filteredCompanyOptions$ | async; track company) {
-            <mat-option [value]="company">{{ company }}</mat-option>
-          }
-        </mat-autocomplete>
+        <input matInput [value]="companyName" disabled>
       </mat-form-field>
 
       <mat-form-field>

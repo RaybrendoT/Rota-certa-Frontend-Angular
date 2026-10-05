@@ -76,7 +76,8 @@ export class CompanyDetailComponent implements OnInit {
       });
     } else {
       this.companyService.create(data).subscribe({
-        next: () => this.router.navigate(['/company']),
+        // Empresa nova: já emenda no cadastro do gestor dela (o gerente faz os dois de uma vez).
+        next: (company) => this.router.navigate(['/gestores/novo'], { queryParams: { company_id: company.id } }),
         error: (err) => console.error('Erro ao criar empresa:', err)
       });
     }

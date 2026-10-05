@@ -1,0 +1,95 @@
+<mat-card class="p-6 max-w-2xl mx-auto">
+  <mat-card-header>
+    <mat-card-title>{{ isEdit ? 'Editar' : 'Novo' }} Gestor</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (isEdit) {
+      <form [formGroup]="form" class="flex flex-col gap-4 mt-4">
+        <mat-form-field>
+          <mat-label>Empresa</mat-label>
+          <input matInput [value]="editCompanyName" disabled>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Nome</mat-label>
+          <input matInput formControlName="name" required>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Telefone</mat-label>
+          <input matInput formControlName="phone" required>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Código do Funcionário</mat-label>
+          <input matInput formControlName="employee_code" required>
+        </mat-form-field>
+      </form>
+    } @else {
+      <mat-radio-group class="mode-toggle mt-4" [value]="mode" (change)="setMode($event.value)">
+        <mat-radio-button value="new">Pessoa nova</mat-radio-button>
+        <mat-radio-button value="existing">Funcionário já cadastrado</mat-radio-button>
+      </mat-radio-group>
+
+      <form class="flex flex-col gap-4 mt-4">
+        <mat-form-field>
+          <mat-label>Empresa</mat-label>
+          <input matInput [formControl]="companyControl" [matAutocomplete]="companyAutocomplete" required>
+          <mat-autocomplete #companyAutocomplete="matAutocomplete">
+            @for (company of filteredCompanyOptions$ | async; track company) {
+              <mat-option [value]="company">{{ company }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+
+        @if (mode === 'new') {
+          <div [formGroup]="form" class="flex flex-col gap-4">
+            <mat-form-field>
+              <mat-label>Nome</mat-label>
+              <input matInput formControlName="name" required>
+            </mat-form-field>
+
+            <mat-form-field>
+              <mat-label>Telefone</mat-label>
+              <input matInput formControlName="phone" required>
+            </mat-form-field>
+
+            <mat-form-field>
+              <mat-label>Código do Funcionário</mat-label>
+              <input matInput formControlName="employee_code" required>
+            </mat-form-field>
+          </div>
+        } @else {
+          <mat-form-field>
+            <mat-label>Funcionário</mat-label>
+            <mat-select [formControl]="existingPersonId">
+              @for (candidate of existingCandidates; track candidate.id) {
+                <mat-option [value]="candidate.id">
+                  {{ candidate.name }} ({{ candidate.employee_code }})
+                </mat-option>
+              }
+            </mat-select>
+            @if (selectedCompanyId && existingCandidates.length === 0) {
+              <mat-hint>Nenhum funcionário sem conta de gestor nessa empresa.</mat-hint>
+            }
+          </mat-form-field>
+        }
+      </form>
+    }
+
+    @if (errorMessage) {
+      <p class="form-error" role="alert">{{ errorMessage }}</p>
+    }
+  </mat-card-content>
+
+  <mat-card-actions class="flex justify-end gap-3 mt-4">
+    @if (isEdit) {
+      <button mat-button color="warn" (click)="demote()">Remover perfil de gestor</button>
+    }
+    <button mat-button (click)="cancel()">Cancelar</button>
+    <button mat-raised-button color="primary" (click)="save()" [disabled]="!canSubmit">
+      {{ isSubmitting ? 'Salvando...' : (isEdit ? 'Atualizar' : 'Salvar') }}
+    </button>
+  </mat-card-actions>
+</mat-card>

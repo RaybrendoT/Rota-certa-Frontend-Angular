@@ -8,13 +8,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
 import { EmployeeService } from '../../services/employee.service';
-import { CompanyService } from '../../../company/service/company.service';
-import { Company, CompanyListResponse } from '../../../company/models/company';
-import { Person } from '../../models/person';
+import { AuthService } from '../../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
 
 @Component({
   selector: 'app-employee-detail',
@@ -27,8 +23,7 @@ import { Person } from '../../models/person';
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
-    MatCheckboxModule,
-    MatAutocompleteModule
+    MatCheckboxModule
   ],
   templateUrl: './employee-detail.component.html',
   styleUrl: './employee-detail.component.scss'
@@ -36,22 +31,23 @@ import { Person } from '../../models/person';
 export class EmployeeDetailComponent implements OnInit {
   private fb = inject(FormBuilder);
   private employeeService = inject(EmployeeService);
-  private companyService = inject(CompanyService);
+  private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
   form!: FormGroup;
   isEdit = false;
   employeeId: number | null = null;
-  filteredCompanyOptions$!: Observable<string[]>;
-  private companyOptions$ = new BehaviorSubject<string[]>([]);
-  private companyNamesById = new Map<number, string>();
-  private companyIdsByName = new Map<string, number>();
+
+  /**
+   * O gestor só cadastra/edita gente da própria empresa (o backend rejeita qualquer outra),
+   * então a empresa nem é um campo editável aqui: é sempre a de quem está logado.
+   */
+  readonly companyName = this.auth.person()?.company_name ?? '';
+  private readonly companyId = this.auth.person()?.company_id ?? null;
 
   ngOnInit(): void {
     this.initForm();
-    this.initCompanyAutocomplete();
-    this.loadCompanyOptions();
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -63,7 +59,6 @@ export class EmployeeDetailComponent implements OnInit {
 
   initForm(): void {
     this.form = this.fb.group({
-      company: ['', Validators.required],
       name: ['', Validators.required],
       phone: ['', Validators.required],
       type: ['EMPLOYEE', Validators.required],
@@ -75,58 +70,6 @@ export class EmployeeDetailComponent implements OnInit {
     this.form.get('type')?.valueChanges.subscribe(type => {
       this.updateValidators(type);
     });
-  }
-
-  private initCompanyAutocomplete(): void {
-    const companyControl = this.form.get('company');
-    if (!companyControl) return;
-
-    this.filteredCompanyOptions$ = combineLatest([
-      companyControl.valueChanges.pipe(startWith(companyControl.value ?? '')),
-      this.companyOptions$
-    ]).pipe(
-      map(([value, companies]) => this.filterCompanies(String(value ?? ''), companies))
-    );
-  }
-
-  private loadCompanyOptions(): void {
-    this.companyService.getAll().subscribe({
-      next: (response) => {
-        const list = this.getCompaniesFromResponse(response) ?? [];
-
-        // Mapa id -> nome
-        this.companyNamesById = new Map(list.map(company => [company.id, company.name]));
-
-        // Mapa nome(normalizado) -> id
-        const nameToId = new Map<string, number>();
-        for (const company of list) {
-          const key = String(company.name ?? '').trim().toLowerCase();
-          if (key && !nameToId.has(key)) {
-            nameToId.set(key, company.id);
-          }
-        }
-        this.companyIdsByName = nameToId;
-
-        // Opções únicas e ordenadas para o autocomplete
-        const companies = list
-          .map(company => company.name)
-          .filter(name => !!name?.trim());
-        this.companyOptions$.next([...new Set(companies)].sort((a, b) => a.localeCompare(b)));
-      },
-      error: (err) => console.error('Erro ao carregar empresas:', err)
-    });
-  }
-
-  private getCompaniesFromResponse(response: CompanyListResponse | Company[]): Company[] {
-    if (Array.isArray(response)) return response;
-    return response.value ?? response.results ?? [];
-  }
-
-  private filterCompanies(value: string, companies: string[]): string[] {
-    const search = value.trim().toLowerCase();
-    if (!search) return companies;
-
-    return companies.filter(company => company.toLowerCase().includes(search));
   }
 
   updateValidators(type: string): void {
@@ -149,64 +92,22 @@ export class EmployeeDetailComponent implements OnInit {
   loadEmployee(id: number): void {
     this.employeeService.getById(id).subscribe({
       next: (employee) => {
-        this.form.patchValue({
-          ...employee,
-          company: this.getCompanyFormValue(employee.company)
-        });
+        this.form.patchValue(employee);
         this.updateValidators(employee.type);
       },
       error: (err) => console.error('Erro ao carregar funcionário:', err)
     });
   }
 
-  private getCompanyFormValue(company: Person['company']): string {
-    return this.getCompanyName(company);
-  }
-
-  private getCompanyName(company: Person['company']): string {
-    if (!company) return '';
-
-    if (typeof company === 'object') {
-      return company.name ?? company.company_name ?? '';
-    }
-
-    if (typeof company === 'number') {
-      return this.companyNamesById.get(company) ?? '';
-    }
-
-    return String(company);
-  }
-
   save(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.companyId == null) return;
 
     const data = this.form.value;
-
-    // Converter 'company' do formulário (nome/string) para ID esperado pelo backend
-    let companyId: number | null = null;
-    const rawCompany = data.company;
-
-    if (typeof rawCompany === 'number') {
-      companyId = rawCompany;
-    } else if (rawCompany && typeof rawCompany === 'object' && 'id' in rawCompany) {
-      companyId = Number((rawCompany as any).id);
-    } else if (typeof rawCompany === 'string') {
-      const key = rawCompany.trim().toLowerCase();
-      companyId = this.companyIdsByName.get(key) ?? null;
-    }
-
-    if (companyId == null) {
-      console.error('Empresa inválida ou não encontrada nas opções:', rawCompany);
-      alert('Selecione uma empresa válida da lista.');
-      return;
-    }
-
-    // Normalizar campos conforme o tipo
     const type = String(data.type ?? '').toUpperCase();
     const payload = {
       ...data,
       type,
-      company: companyId,
+      company: this.companyId
     } as any;
 
     if (type === 'EMPLOYEE') {
@@ -216,15 +117,20 @@ export class EmployeeDetailComponent implements OnInit {
     }
 
     if (this.isEdit && this.employeeId) {
-      // Usando PATCH para atualização parcial
       this.employeeService.patch(this.employeeId, payload).subscribe({
         next: () => this.router.navigate(['/funcionarios']),
-        error: (err) => console.error('Erro ao atualizar:', err?.error ?? err)
+        error: (err) => {
+          console.error('Erro ao atualizar:', err?.error ?? err);
+          alert(extractErrorMessage(err, 'Não foi possível atualizar o funcionário.'));
+        }
       });
     } else {
       this.employeeService.create(payload).subscribe({
         next: () => this.router.navigate(['/funcionarios']),
-        error: (err) => console.error('Erro ao criar:', err?.error ?? err)
+        error: (err) => {
+          console.error('Erro ao criar:', err?.error ?? err);
+          alert(extractErrorMessage(err, 'Não foi possível criar o funcionário.'));
+        }
       });
     }
   }

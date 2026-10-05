@@ -24,4 +24,9 @@ export class ConfigService {
   getApiBaseUrl(): string {
     return this.config?.apiBaseUrl || '';
   }
+
+  /** Django admin no mesmo servidor da API: ".../api" -> ".../admin/". */
+  getAdminUrl(): string {
+    return `${this.getApiBaseUrl().replace(/\/api\/?$/, '')}/admin/`;
+  }
 }

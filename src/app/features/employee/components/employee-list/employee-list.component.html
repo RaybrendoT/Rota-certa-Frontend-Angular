@@ -20,7 +20,7 @@
     <!-- Empresa -->
     <ng-container matColumnDef="company">
       <th mat-header-cell *matHeaderCellDef>Empresa</th>
-      <td mat-cell *matCellDef="let employee">{{ getCompanyLabel(employee.company) }}</td>
+      <td mat-cell *matCellDef="let employee">{{ getCompanyLabel(employee) }}</td>
     </ng-container>
 
     <!-- Telefone -->
@@ -35,6 +35,16 @@
       <td mat-cell *matCellDef="let employee">
         <span class="badge" [class.employee]="isEmployeeType(employee.type)">
           {{ getTypeLabel(employee.type) }}
+        </span>
+      </td>
+    </ng-container>
+
+    <!-- Perfil de acesso -->
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef>Acesso</th>
+      <td mat-cell *matCellDef="let employee">
+        <span class="badge" [class.manager]="employee.role === 'MANAGER'">
+          {{ getRoleLabel(employee.role) }}
         </span>
       </td>
     </ng-container>

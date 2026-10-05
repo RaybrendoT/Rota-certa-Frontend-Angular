@@ -2,11 +2,12 @@ import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDete
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import { ConfigService } from './core/services/config.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { DeduplicateRequestsInterceptor } from './core/interceptors/deduplicate-requests.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 export function getPaginatorIntl(): MatPaginatorIntl {
   const paginatorIntl = new MatPaginatorIntl();
@@ -34,7 +35,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideAnimations(),
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withInterceptors([authInterceptor]), withInterceptorsFromDi()),
     ConfigService,
     provideAppInitializer(() => {
       const configService = inject(ConfigService);

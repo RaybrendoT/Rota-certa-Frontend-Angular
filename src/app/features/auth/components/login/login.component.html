@@ -1,0 +1,34 @@
+<div class="auth-page">
+  <mat-card class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-brand-dot"></div>
+      <span>Rotacerta</span>
+    </div>
+
+    <h2>Entrar no painel</h2>
+    <p class="auth-subtitle">Acesso exclusivo para gestores e gerentes.</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+      <mat-form-field>
+        <mat-label>E-mail</mat-label>
+        <input matInput type="email" formControlName="email" autocomplete="username" required>
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <mat-error>Informe um e-mail válido.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Senha</mat-label>
+        <input matInput type="password" formControlName="password" autocomplete="current-password" required>
+      </mat-form-field>
+
+      @if (errorMessage) {
+        <p class="auth-error" role="alert">{{ errorMessage }}</p>
+      }
+
+      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || isSubmitting">
+        {{ isSubmitting ? 'Entrando...' : 'Entrar' }}
+      </button>
+    </form>
+  </mat-card>
+</div>
