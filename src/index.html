@@ -8,6 +8,17 @@
     }
 
   </style>
+  <script>
+    // Aplica o modo claro/escuro antes do Angular carregar, para a tela não piscar (ver ThemeService).
+    (function () {
+      var theme;
+      try { theme = localStorage.getItem('rotacerta.theme'); } catch (e) {}
+      if (theme !== 'light' && theme !== 'dark') {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <meta charset="utf-8">
   <title>Rota Certa 2026</title>
   <base href="/">

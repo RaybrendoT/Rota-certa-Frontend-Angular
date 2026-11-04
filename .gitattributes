@@ -1,0 +1,4 @@
+# Scripts e configs que rodam dentro do container Linux precisam de LF.
+*.sh text eol=lf
+deploy/nginx.conf text eol=lf
+Dockerfile text eol=lf

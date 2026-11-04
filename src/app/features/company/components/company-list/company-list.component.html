@@ -1,13 +1,12 @@
-<mat-card class="list-card p-4">
+<mat-card class="list-card">
   <div class="list-header">
-    <h2>Empresas</h2>
     <button mat-raised-button color="primary" routerLink="novo">
       <mat-icon>add</mat-icon>
       Nova Empresa
     </button>
   </div>
 
-  <table mat-table [dataSource]="companies" class="mat-elevation-z1 w-full list-table">
+  <table mat-table [dataSource]="companies" class="list-table">
 
     <!-- Nome -->
     <ng-container matColumnDef="name">

@@ -1,10 +1,10 @@
-<mat-card class="p-6 max-w-2xl mx-auto">
+<mat-card class="page-card form-card">
   <mat-card-header>
-    <mat-card-title>{{ isEdit ? 'Editar' : 'Novo' }} Evento de Rota</mat-card-title>
+    <mat-card-subtitle>Registro manual de uma ocorrência na rota.</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
-    <form [formGroup]="form" class="flex flex-col gap-4 mt-4">
+    <form [formGroup]="form" class="form-grid">
       <mat-form-field>
         <mat-label>Rota</mat-label>
         <mat-select formControlName="route" required>
@@ -24,7 +24,7 @@
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field>
+      <mat-form-field class="span-2">
         <mat-label>Descrição</mat-label>
         <input matInput formControlName="description" required>
       </mat-form-field>
@@ -43,7 +43,8 @@
     </form>
   </mat-card-content>
 
-  <mat-card-actions class="flex justify-end gap-3 mt-4">
+  <mat-card-actions class="form-actions">
+    <span class="form-hint">* campos obrigatórios</span>
     <button mat-button (click)="cancel()">Cancelar</button>
     <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
       {{ isEdit ? 'Atualizar' : 'Salvar' }}

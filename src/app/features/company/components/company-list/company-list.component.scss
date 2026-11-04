@@ -1,50 +1,10 @@
-.list-card {
-  background: #ffffff;
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.list-header h2 {
-  color: #111827;
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.list-header button {
-  flex-shrink: 0;
-}
-
-.list-table {
-  overflow: hidden;
-}
-
-.list-table th {
-  color: #111827;
-  font-weight: 600;
-  padding: 14px 24px;
-  white-space: nowrap;
-}
-
-.list-table td {
-  color: #374151;
-  padding: 14px 24px;
-  vertical-align: middle;
-}
-
 .active {
-  color: #2e7d32;
+  color: var(--rc-success-text);
   font-weight: 600;
 }
 
 .inactive {
-  color: #c62828;
+  color: var(--rc-danger-text);
   font-weight: 600;
 }
 
@@ -53,10 +13,6 @@
 }
 
 .error {
-  color: #c62828;
+  color: var(--rc-danger-text);
 }
 
-mat-paginator {
-  background: #ffffff;
-  color: #374151;
-}

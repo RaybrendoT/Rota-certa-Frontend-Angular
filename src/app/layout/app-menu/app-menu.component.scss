@@ -1,197 +1,422 @@
-/* ====================== TOPBAR ====================== */
-.topbar {
-  background-color: #1e40af;
-  color: white;
-  height: 64px;
-  padding: 0 24px;
+/* Layout no estilo do admin: menu lateral escuro de altura total, barra azul sobre o conteúdo,
+   conteúdo em fundo cinza-claro com o título da página fora dos cards. */
+$sidebar-width: 250px;
+$sidebar-collapsed: 72px;
+$topbar-height: 56px;
+
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: $sidebar-width minmax(0, 1fr);
+  height: 100%;
+  transition: grid-template-columns 0.2s ease;
+
+  &.collapsed {
+    grid-template-columns: $sidebar-collapsed minmax(0, 1fr);
+  }
+}
+
+/* ====================== MENU LATERAL ====================== */
+.sidebar {
+  background: #0f172a;
+  color: #cbd5e1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-direction: column;
+  min-height: 0;
+  overflow-x: hidden;
+  z-index: 20;
 }
 
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.logo-dot {
-  width: 10px;
-  height: 10px;
-  background-color: #3b82f6;
-  border-radius: 50%;
-}
-
-.topbar-menu {
-  display: flex;
-  gap: 8px;
-}
-
-.topbar-menu button {
-  color: #dbeafe;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 6px;
-}
-
-.topbar-menu button.active,
-.topbar-menu button:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-.topbar-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.user-role {
-  font-size: 0.75rem;
-  color: #bfdbfe;
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 50%;
+.brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
+  gap: 12px;
+  height: $topbar-height;
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid #1e293b;
+  color: #ffffff;
+  text-decoration: none;
 }
 
-.logout-button {
-  color: #dbeafe;
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
-/* ====================== LAYOUT ====================== */
-.layout-container {
-  height: calc(100vh - 64px);
-  background-color: #0f172a;
+.brand-name {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
-.sidebar {
-  width: 260px;
-  background-color: #0f172a;
-  border-right: 1px solid #1e2937;
-  padding: 16px 8px;
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 8px 4px;
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid #1e293b;
   color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .menu-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px 16px;
 }
 
 .menu-section {
-  margin-bottom: 24px;
+  margin-top: 12px;
 }
 
 .menu-title {
+  padding: 8px 12px 6px;
+  color: #64748b;
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
-  padding: 0 16px 8px 16px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .menu-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  margin: 2px 8px;
+  height: 40px;
+  padding: 0 12px;
+  margin: 2px 0;
   border-radius: 8px;
   color: #cbd5e1;
+  font-size: 14px;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: background-color 0.15s, color 0.15s;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: #1e293b;
+    color: #ffffff;
+  }
+
+  &.active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+  }
+
+  mat-icon.menu-external {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    opacity: 0.6;
+  }
 }
 
-.menu-item:hover {
-  background-color: #1e2937;
-}
-
-.menu-item.active {
-  background-color: #1e40af;
-  color: white;
-}
-
-.menu-item mat-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  vertical-align: middle;
-}
-
-// O mat-list-item projeta ícone e rótulo inline num wrapper interno (o gap do .menu-item
-// não alcança), então o espaçamento fica no próprio rótulo.
 .menu-label {
-  margin-left: 12px;
   white-space: nowrap;
-  vertical-align: middle;
 }
 
-/* ====================== MENU RECOLHIDO ====================== */
-.sidebar {
-  transition: width 0.2s ease;
-  overflow-x: hidden;
+// Contador de pendências (ex.: endereços para aprovar). No menu recolhido vira um ponto sobre o ícone.
+.menu-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  box-sizing: border-box;
 }
 
-.sidebar.collapsed {
-  width: 72px;
+/* Recolhido: só ícones (nome no tooltip). */
+.shell.collapsed {
+  .menu-label,
+  .menu-external {
+    display: none;
+  }
+
+  .brand,
+  .sidebar-user,
+  .menu-item {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sidebar-user {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
 
   .menu-title {
     // Mantém o espaçamento entre seções, mas troca o texto por uma linha discreta.
     font-size: 0;
     padding: 0;
     margin: 0 12px 8px;
-    border-top: 1px solid #1e2937;
+    border-top: 1px solid #1e293b;
   }
 
-  .menu-section:first-child .menu-title {
-    border-top: none;
+  .menu-badge {
+    position: absolute;
+    top: 6px;
+    right: 14px;
+    min-width: 10px;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    font-size: 0;
+  }
+}
+
+/* ====================== BARRA AZUL + CONTEÚDO ====================== */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: $topbar-height;
+  flex-shrink: 0;
+  padding: 0 16px 0 8px;
+  background: var(--rc-topbar);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
+  z-index: 10;
+}
+
+.topbar-toggle {
+  color: #ffffff;
+}
+
+.topbar-links {
+  display: flex;
+  gap: 4px;
+
+  a {
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #dbeafe;
+    font-size: 15px;
+    text-decoration: none;
+
+    &:hover,
+    &.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+    }
+  }
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.user-text {
+  text-align: right;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.user-role {
+  font-size: 12px;
+  color: #bfdbfe;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #3b82f6;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.logout-button {
+  color: #ffffff;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px 24px 32px;
+  background: var(--rc-bg);
+  color: var(--rc-text);
+}
+
+.page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 auto 16px;
+
+  h1 {
+    margin: 0;
+    color: var(--rc-text);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--rc-text-muted);
+
+  a {
+    color: var(--rc-link);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
-  .menu-label,
-  .menu-external {
+  .sep {
+    color: var(--rc-text-muted);
+  }
+
+  .current {
+    color: var(--rc-text-2);
+  }
+}
+
+.backdrop {
+  display: none;
+}
+
+/* ====================== CELULAR / TELA ESTREITA ====================== */
+@media (max-width: 900px) {
+  .shell,
+  .shell.collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  // O menu vira gaveta sobre o conteúdo; sempre com os nomes, mesmo se recolhido no desktop.
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: $sidebar-width;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.4);
+  }
+
+  .shell.collapsed {
+    .menu-label {
+      display: inline;
+    }
+
+    .brand,
+    .sidebar-user,
+    .menu-item {
+      justify-content: flex-start;
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .menu-title {
+      font-size: 11px;
+      padding: 8px 12px 6px;
+      margin: 0;
+      border-top: none;
+    }
+  }
+
+  .shell.mobile-open {
+    .sidebar {
+      transform: none;
+    }
+
+    .backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 15;
+    }
+  }
+
+  .main {
+    grid-column: 1;
+  }
+
+  .user-text {
     display: none;
   }
 
-  .menu-item {
-    justify-content: center;
-    padding: 10px 0;
-    margin: 2px 4px;
+  .content {
+    padding: 16px;
   }
 }
 
-/* ====================== CONTEÚDO ====================== */
-.content {
-  padding: 24px;
-  background-color: #0f172a;
-  height: 100%;
-  overflow-y: auto;
-  color: #e2e8f0;
+.topbar-theme {
+  color: #ffffff;
+  margin-left: auto;
 }
 
-.menu-item mat-icon.menu-external {
-  font-size: 14px;
-  width: 14px;
-  height: 14px;
-  margin-left: 8px;
-  opacity: 0.6;
+.topbar-theme + .topbar-user {
+  margin-left: 4px;
 }

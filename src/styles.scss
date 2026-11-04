@@ -1,7 +1,335 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
 
 @import "primeflex/primeflex.css";
 
+/* =====================================================================
+   Tema do Angular Material (M2, as mesmas cores do antigo prebuilt indigo-pink)
+   em duas variantes: clara (padrão) e escura (html[data-theme="dark"]).
+   ===================================================================== */
+$rc-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
+$rc-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
+$rc-warn: mat.m2-define-palette(mat.$m2-red-palette);
+$rc-typography: mat.m2-define-typography-config();
+
+$rc-light-theme: mat.m2-define-light-theme((
+  color: (primary: $rc-primary, accent: $rc-accent, warn: $rc-warn),
+  typography: $rc-typography,
+  density: 0,
+));
+$rc-dark-theme: mat.m2-define-dark-theme((
+  color: (primary: mat.m2-define-palette(mat.$m2-indigo-palette, 300, 200, 400), accent: $rc-accent, warn: $rc-warn),
+));
+
+@include mat.core();
+@include mat.typography-hierarchy($rc-typography);
+@include mat.all-component-themes($rc-light-theme);
+
+html[data-theme='dark'] {
+  @include mat.all-component-colors($rc-dark-theme);
+}
 
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: var(--rc-bg);
+  color: var(--rc-text);
+}
+
+/* =====================================================================
+   Cores do painel (variáveis). Os componentes usam só estas variáveis,
+   então a troca de tema é feita aqui: claro em :root, escuro em [data-theme="dark"].
+   ===================================================================== */
+:root {
+  color-scheme: light;
+  --rc-bg: #f1f5f9;
+  --rc-surface: #ffffff;
+  --rc-surface-muted: #f8fafc;
+  --rc-border: #e5e7eb;
+  --rc-text: #111827;
+  --rc-text-2: #374151;
+  --rc-text-muted: #6b7280;
+  --rc-primary: #1e40af;
+  --rc-link: #2563eb;
+  --rc-topbar: #1e40af;
+  --rc-row-alt: #f8fafc;
+  --rc-row-hover: #eef2ff;
+  --rc-info-bg: #eff6ff;
+  --rc-info-text: #1e40af;
+  --rc-success-bg: #ecfdf5;
+  --rc-success-text: #047857;
+  --rc-warning-bg: #fffbeb;
+  --rc-warning-text: #92400e;
+  --rc-danger-bg: #fef2f2;
+  --rc-danger-text: #b91c1c;
+  --rc-radius: 12px;
+  --rc-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.08);
+  --rc-gap: 16px;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --rc-bg: #0b1220;
+  --rc-surface: #111a2e;
+  --rc-surface-muted: #16213a;
+  --rc-border: #24314d;
+  --rc-text: #e5e7eb;
+  --rc-text-2: #cbd5e1;
+  --rc-text-muted: #94a3b8;
+  --rc-primary: #93c5fd;
+  --rc-link: #60a5fa;
+  --rc-topbar: #172554;
+  --rc-row-alt: #131e35;
+  --rc-row-hover: #1c2a4a;
+  --rc-info-bg: rgba(59, 130, 246, 0.16);
+  --rc-info-text: #93c5fd;
+  --rc-success-bg: rgba(16, 185, 129, 0.16);
+  --rc-success-text: #6ee7b7;
+  --rc-warning-bg: rgba(245, 158, 11, 0.16);
+  --rc-warning-text: #fcd34d;
+  --rc-danger-bg: rgba(239, 68, 68, 0.16);
+  --rc-danger-text: #fca5a5;
+  --rc-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35);
+
+  /* Superfícies do Material (diálogo, menus, selects, cards) no mesmo tom dos cards do painel. */
+  --mdc-dialog-container-color: var(--rc-surface);
+  --mat-select-panel-background-color: var(--rc-surface);
+  --mat-autocomplete-background-color: var(--rc-surface);
+  --mat-menu-container-color: var(--rc-surface);
+  --mdc-elevated-card-container-color: var(--rc-surface);
+  --mat-paginator-container-background-color: transparent;
+  --mat-table-background-color: var(--rc-surface);
+  --mdc-filled-text-field-container-color: var(--rc-surface-muted);
+  --mdc-filled-text-field-disabled-container-color: rgba(255, 255, 255, 0.04);
+}
+
+
+/* ---------- superfícies ---------- */
+.page-card,
+.list-card,
+mat-card.page-card {
+  background: var(--rc-surface) !important;
+  color: var(--rc-text);
+  border-radius: var(--rc-radius) !important;
+  box-shadow: var(--rc-shadow) !important;
+  padding: 20px !important;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+}
+
+/* ---------- cabeçalho de página (título, subtítulo e ação principal) ---------- */
+.list-header,
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--rc-gap);
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    color: var(--rc-text);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  button {
+    flex-shrink: 0;
+  }
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  color: var(--rc-text-muted);
+  font-size: 13px;
+}
+
+/* ---------- tabelas ---------- */
+.table-wrapper {
+  border: 1px solid var(--rc-border);
+  border-radius: 10px;
+  overflow-x: auto;
+  background: var(--rc-surface);
+}
+
+.list-table {
+  width: 100%;
+  min-width: 640px;
+  box-shadow: none !important;
+  background: var(--rc-surface) !important;
+
+  th.mat-mdc-header-cell {
+    background: var(--rc-surface-muted);
+    color: var(--rc-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 12px 20px;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--rc-border);
+  }
+
+  td.mat-mdc-cell {
+    color: var(--rc-text-2);
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--rc-border);
+    vertical-align: middle;
+  }
+
+  tr.mat-mdc-row:last-child td.mat-mdc-cell {
+    border-bottom: none;
+  }
+
+  tr.mat-mdc-row:hover {
+    background: var(--rc-row-hover);
+  }
+}
+
+.table-message {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--rc-text-muted);
+
+  &.error {
+    color: var(--rc-danger-text);
+  }
+}
+
+.list-card mat-paginator,
+.page-card mat-paginator {
+  background: transparent;
+  color: var(--rc-text-2);
+  margin-top: 8px;
+}
+
+/* ---------- formulários ---------- */
+mat-card.form-card {
+  max-width: 760px;
+
+  mat-card-header {
+    padding: 0 0 4px;
+  }
+
+  mat-card-title {
+    color: var(--rc-text);
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  mat-card-subtitle {
+    color: var(--rc-text-muted);
+    margin-top: 4px;
+  }
+
+  mat-card-content {
+    padding: 0;
+  }
+}
+
+/* Duas colunas no desktop, uma no celular; campos largos e caixas de seleção ocupam a linha toda. */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--rc-gap);
+  row-gap: 4px;
+  margin-top: 20px;
+
+  > mat-form-field {
+    width: 100%;
+  }
+
+  > .span-2,
+  > mat-checkbox,
+  > mat-radio-group,
+  > .form-section {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form-section {
+  margin: 12px 0 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rc-border);
+  color: var(--rc-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+mat-card-actions.form-actions,
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px 0 0 !important;
+  border-top: 1px solid var(--rc-border);
+}
+
+.form-hint {
+  margin-right: auto;
+  color: var(--rc-text-muted);
+  font-size: 12px;
+}
+
+/* ---------- ajustes no estilo do admin (título da página fica fora do card, no layout) ---------- */
+/* Sem o título dentro do card, o botão principal da lista fica à direita, como "Adicionar" no admin. */
+.list-header {
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+/* Tabela densa com linhas alternadas: mais registros visíveis sem rolar. */
+.list-table {
+  th.mat-mdc-header-cell {
+    background: var(--rc-surface);
+    color: var(--rc-text);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 10px 16px;
+    border-bottom: 2px solid var(--rc-border);
+  }
+
+  td.mat-mdc-cell {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  tr.mat-mdc-header-row {
+    height: 44px;
+  }
+
+  tr.mat-mdc-row {
+    height: 44px;
+  }
+
+  tr.mat-mdc-row:nth-child(odd) td.mat-mdc-cell {
+    background: var(--rc-row-alt);
+  }
+
+  tr.mat-mdc-row:hover td.mat-mdc-cell {
+    background: var(--rc-row-hover);
+  }
+}
+
+.table-wrapper {
+  border-radius: 8px;
+}
+
+mat-card.form-card {
+  max-width: 960px;
+}

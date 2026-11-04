@@ -1,0 +1,56 @@
+<div class="pickup">
+  <p class="muted intro">
+    Quem mora a mais da distância a pé abaixo de qualquer ponto de encontro fica "descoberto".
+    Os descobertos são agrupados em hexágonos (H3) e, onde um grupo chega a pé num mesmo lugar,
+    sugere-se um ponto novo. Para criar, use o cadastro de pontos de encontro.
+  </p>
+
+  <div class="filters">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Distância a pé (m)</mat-label>
+      <input matInput type="number" min="200" max="5000" step="100" [(ngModel)]="walkLimit">
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Mínimo de pessoas</mat-label>
+      <input matInput type="number" min="2" max="200" [(ngModel)]="minPeople">
+    </mat-form-field>
+    <button mat-stroked-button (click)="load()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      Calcular
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading"><mat-spinner diameter="28"></mat-spinner></div>
+  } @else if (error()) {
+    <div class="error"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+  }
+  @if (!loading() && !error() && result(); as data) {
+    <div class="stats">
+      <div><strong>{{ coverage(data) | number: '1.0-0' }}%</strong><span>a até {{ data.walk_limit_m }} m de um ponto</span></div>
+      <div><strong>{{ data.uncovered }}</strong><span>descobertos hoje</span></div>
+      <div><strong>{{ data.still_uncovered }}</strong><span>continuam descobertos</span></div>
+    </div>
+
+    @for (suggestion of data.suggestions; track suggestion.h3_cell) {
+      <div class="suggestion">
+        <div class="suggestion-head">
+          <mat-icon class="pin">add_location_alt</mat-icon>
+          <div class="suggestion-title">
+            <strong>{{ title(suggestion) }}</strong>
+            <span class="muted">{{ suggestion.latitude }}, {{ suggestion.longitude }}</span>
+          </div>
+          <a mat-icon-button [href]="mapsLink(suggestion)" target="_blank" rel="noopener" matTooltip="Ver no Google Maps">
+            <mat-icon>open_in_new</mat-icon>
+          </a>
+        </div>
+        <div class="suggestion-meta">
+          <span [matTooltip]="names(suggestion)"><mat-icon>groups</mat-icon>{{ suggestion.people }} pessoas</span>
+          <span><mat-icon>directions_walk</mat-icon>{{ suggestion.avg_distance_now_m }} m → {{ suggestion.avg_distance_after_m }} m</span>
+        </div>
+      </div>
+    } @empty {
+      <p class="muted">Nenhum ponto novo sugerido com esses critérios.</p>
+    }
+  }
+</div>

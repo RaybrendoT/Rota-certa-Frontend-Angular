@@ -1,6 +1,5 @@
-<mat-card class="list-card p-4">
+<mat-card class="list-card">
     <div class="list-header">
-      <h2>Funcionários</h2>
 
       <button mat-raised-button color="primary" routerLink="novo">
         <mat-icon>add</mat-icon>
@@ -9,59 +8,44 @@
     </div>
 
   <div class="table-wrapper">
-    <table mat-table [dataSource]="employees" class="mat-elevation-z1 w-full list-table">
+    <table mat-table [dataSource]="employees" class="list-table">
 
-    <!-- Nome -->
+    <!-- Nome, com tipo e acesso como badges -->
     <ng-container matColumnDef="name">
       <th mat-header-cell *matHeaderCellDef>Nome</th>
-      <td mat-cell *matCellDef="let employee">{{ employee.name }}</td>
+      <td mat-cell *matCellDef="let employee">
+        <div class="person-name">{{ employee.name }}</div>
+        <div class="badges">
+          <span class="badge" [class.employee]="isEmployeeType(employee.type)" [class.driver]="!isEmployeeType(employee.type)">
+            {{ getTypeLabel(employee.type) }}
+          </span>
+          @if (employee.role === 'MANAGER' || employee.role === 'GERENTE') {
+            <span class="badge manager">{{ getRoleLabel(employee.role) }}</span>
+          }
+          @if (!employee.role) {
+            <span class="badge muted">Sem acesso</span>
+          }
+        </div>
+      </td>
     </ng-container>
 
-    <!-- Empresa -->
+    <!-- Empresa (só para o gerente) -->
     <ng-container matColumnDef="company">
       <th mat-header-cell *matHeaderCellDef>Empresa</th>
       <td mat-cell *matCellDef="let employee">{{ getCompanyLabel(employee) }}</td>
     </ng-container>
 
-    <!-- Telefone -->
-    <ng-container matColumnDef="phone">
-      <th mat-header-cell *matHeaderCellDef>Telefone</th>
-      <td mat-cell *matCellDef="let employee">{{ employee.phone }}</td>
-    </ng-container>
-
-    <!-- Tipo -->
-    <ng-container matColumnDef="type">
-      <th mat-header-cell *matHeaderCellDef>Tipo</th>
-      <td mat-cell *matCellDef="let employee">
-        <span class="badge" [class.employee]="isEmployeeType(employee.type)">
-          {{ getTypeLabel(employee.type) }}
-        </span>
-      </td>
-    </ng-container>
-
-    <!-- Perfil de acesso -->
-    <ng-container matColumnDef="role">
-      <th mat-header-cell *matHeaderCellDef>Acesso</th>
-      <td mat-cell *matCellDef="let employee">
-        <span class="badge" [class.manager]="employee.role === 'MANAGER'">
-          {{ getRoleLabel(employee.role) }}
-        </span>
-      </td>
-    </ng-container>
-
-    <!-- Código -->
+    <!-- Matrícula / CNH -->
     <ng-container matColumnDef="code">
       <th mat-header-cell *matHeaderCellDef>Matrícula</th>
-      <td mat-cell *matCellDef="let employee">
-        {{ employee.employee_code || employee.license_number || '-' }}
-      </td>
+      <td mat-cell *matCellDef="let employee">{{ getCode(employee) }}</td>
     </ng-container>
 
     <!-- Status -->
     <ng-container matColumnDef="is_active">
       <th mat-header-cell *matHeaderCellDef>Status</th>
       <td mat-cell *matCellDef="let employee">
-        <span [class.active]="employee.is_active" [class.inactive]="!employee.is_active">
+        <span class="status" [class.active]="employee.is_active" [class.inactive]="!employee.is_active">
           {{ employee.is_active ? 'Ativo' : 'Inativo' }}
         </span>
       </td>
@@ -69,19 +53,22 @@
 
     <!-- Ações -->
     <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef>Ações</th>
-      <td mat-cell *matCellDef="let employee">
-        <button mat-icon-button [routerLink]="[employee.id, 'editar']">
+      <th mat-header-cell *matHeaderCellDef class="actions-cell">Ações</th>
+      <td mat-cell *matCellDef="let employee" class="actions-cell" (click)="$event.stopPropagation()">
+        <button mat-icon-button [routerLink]="[employee.id, 'editar']" matTooltip="Editar" [attr.aria-label]="'Editar ' + employee.name">
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button color="warn" (click)="deleteEmployee(employee.id!)">
+        <button mat-icon-button color="warn" (click)="deleteEmployee(employee)" matTooltip="Excluir" [attr.aria-label]="'Excluir ' + employee.name">
           <mat-icon>delete</mat-icon>
         </button>
       </td>
     </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          class="clickable-row" [class.selected]="row.id === selected?.id"
+          tabindex="0" (click)="openDetails(row)" (keydown.enter)="openDetails(row)"
+          [attr.aria-label]="'Ver detalhes de ' + row.name"></tr>
     </table>
   </div>
 
@@ -94,3 +81,130 @@
     (page)="onPageChange($event)">
   </mat-paginator>
 </mat-card>
+
+<!-- Painel lateral: a lista continua visível atrás, com a linha selecionada destacada. -->
+<aside class="details-drawer" [class.open]="!!selected" role="dialog" aria-label="Detalhes do funcionário"
+       [attr.aria-hidden]="!selected">
+  @if (selected; as person) {
+    <header class="drawer-header">
+      <div class="avatar" [class.driver]="!isEmployeeType(person.type)">{{ initials(person.name) }}</div>
+      <div class="drawer-title">
+        <h3>{{ person.name }}</h3>
+        <div class="badges">
+          <span class="muted">{{ getCode(person) }}</span>
+          <span class="status" [class.active]="person.is_active" [class.inactive]="!person.is_active">
+            {{ person.is_active ? 'Ativo' : 'Inativo' }}
+          </span>
+        </div>
+      </div>
+      <button mat-icon-button (click)="closeDetails()" aria-label="Fechar detalhes"><mat-icon>close</mat-icon></button>
+    </header>
+
+    @if (linkedRecords().length) {
+      <div class="linked">
+        <mat-icon>link</mat-icon>
+        <div>
+          <strong>Outro cadastro com o mesmo nome e telefone</strong>
+          @for (record of linkedRecords(); track record.id) {
+            <button class="linked-item" type="button" (click)="openLinked(record.id)">
+              Também cadastrado(a) como {{ getTypeLabel(record.type) | lowercase }} ({{ record.code || 'sem código' }})
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <mat-tab-group animationDuration="0ms" class="drawer-tabs">
+      <mat-tab label="Dados">
+        <dl class="fields">
+          <dt>Telefone</dt><dd>{{ person.phone || '-' }}</dd>
+          <dt>{{ isEmployeeType(person.type) ? 'Matrícula' : 'CNH' }}</dt><dd>{{ getCode(person) }}</dd>
+          <dt>Endereço</dt>
+          <dd>
+            @if (overviewLoading) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else if (overview) {
+              @for (address of overview.addresses; track address.id) {
+                <div>
+                  {{ addressLine(address) }}
+                  <a [href]="mapsLink(address)" target="_blank" rel="noopener" class="map-link">ver no mapa</a>
+                </div>
+                <div class="address-origin" [class.self]="address.source !== 'panel'">
+                  <mat-icon>{{ address.source === 'gps' ? 'my_location' : address.source === 'typed' ? 'edit_location_alt' : 'badge' }}</mat-icon>
+                  {{ addressOrigin(address) }}
+                </div>
+              } @empty {
+                <span class="warn-text">Sem endereço: fica fora do planejamento de rotas.</span>
+              }
+              @if (overview.address_history.length) {
+                <details class="address-history">
+                  <summary>Endereços anteriores ({{ overview.address_history.length }})</summary>
+                  @for (old of overview.address_history; track old.id) {
+                    <div class="muted small">{{ addressLine(old) }} · {{ addressOrigin(old) }}</div>
+                  }
+                </details>
+              }
+            } @else {
+              -
+            }
+          </dd>
+          <dt>Cadastrado em</dt><dd>{{ formatDate(person.created_at) }}</dd>
+        </dl>
+      </mat-tab>
+
+      <mat-tab label="Vínculo">
+        <dl class="fields">
+          <dt>Empresa</dt><dd>{{ getCompanyLabel(person) }}</dd>
+          <dt>Tipo</dt><dd>{{ getTypeLabel(person.type) }}</dd>
+          <dt>Acesso</dt><dd>{{ getRoleLabel(person.role) }}</dd>
+          @if (overview && overview.account; as account) {
+            <dt>E-mail de acesso</dt><dd>{{ account.email }}</dd>
+            <dt>Último acesso</dt><dd>{{ account.last_login ? formatDate(account.last_login) : 'Nunca entrou' }}</dd>
+            @if (account.must_change_password) {
+              <dt>Senha</dt><dd>Troca obrigatória no primeiro acesso</dd>
+            }
+          } @else if (!overviewLoading) {
+            <dt>Conta</dt><dd>Sem conta de acesso</dd>
+          }
+        </dl>
+      </mat-tab>
+
+      <mat-tab label="Rotas">
+        @if (overviewLoading) {
+          <div class="drawer-loading"><mat-spinner diameter="28"></mat-spinner></div>
+        } @else {
+          @for (route of overview ? overview.routes : []; track route.id + route.as) {
+            <div class="route-item">
+              <mat-icon>{{ route.as === 'driver' ? 'directions_bus' : 'event_seat' }}</mat-icon>
+              <div>
+                <strong>{{ route.name }}</strong>
+                <span class="muted small">{{ routeWhen(route) }}</span>
+                <span class="muted small">
+                  {{ route.as === 'driver' ? 'Motorista · ' + route.vehicle : 'Passageiro · ' + (route.meeting_point || 'ponto não definido') }}
+                </span>
+              </div>
+            </div>
+          } @empty {
+            <p class="muted empty">Nenhuma rota atual.</p>
+          }
+        }
+      </mat-tab>
+    </mat-tab-group>
+
+    @if (overviewError) {
+      <p class="error-text">{{ overviewError }}</p>
+    }
+
+    <footer class="drawer-actions">
+      <button mat-stroked-button color="warn" (click)="deleteEmployee(person)">
+        <mat-icon>delete</mat-icon>
+        Excluir
+      </button>
+      <button mat-flat-button color="primary" [routerLink]="[person.id, 'editar']">
+        <mat-icon>edit</mat-icon>
+        Editar
+      </button>
+    </footer>
+  }
+</aside>

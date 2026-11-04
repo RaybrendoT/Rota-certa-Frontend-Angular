@@ -1,7 +1,7 @@
 .maintenance-card {
   align-items: center;
   background: transparent;
-  color: white;
+  color: var(--rc-text);
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -24,7 +24,7 @@
 }
 
 .maintenance-text p {
-  color: #cbd5e1;
+  color: var(--rc-text-muted);
   font-size: 16px;
   margin: 0;
 }

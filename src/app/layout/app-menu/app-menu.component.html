@@ -1,136 +1,181 @@
-<mat-toolbar class="topbar">
-  <div class="topbar-left">
-    <button mat-icon-button (click)="toggleSidebar()"
-            [attr.aria-label]="collapsed() ? 'Expandir menu' : 'Recolher menu'"
-            [attr.aria-expanded]="!collapsed()">
-      <mat-icon>menu</mat-icon>
-    </button>
+<!-- Layout do painel: menu lateral escuro de altura total (logo no topo) + barra azul e conteúdo à direita. -->
+<div class="shell" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen()">
 
-    <div class="logo">
-      <div class="logo-dot"></div>
-      <span>Rotacerta</span>
-    </div>
-  </div>
+  <aside class="sidebar" aria-label="Menu principal">
+    <a routerLink="/dashboard" class="brand" aria-label="Rotacerta — início">
+      <img src="assets/favicon.svg" alt="" class="brand-logo">
+      <span class="brand-name menu-label">Rotacerta</span>
+    </a>
 
-  <div class="topbar-menu">
-    <button mat-button routerLink="/dashboard" routerLinkActive="active">Dashboard</button>
-    @if (auth.isGerente()) {
-      <button mat-button routerLink="/company" routerLinkActive="active">Empresas</button>
-      <button mat-button routerLink="/gestores" routerLinkActive="active">Gestores</button>
-    }
-    @if (auth.isManager()) {
-      <button mat-button routerLink="/veiculos" routerLinkActive="active">Veículos</button>
-      <button mat-button routerLink="/rotas" routerLinkActive="active">Rotas</button>
-      <button mat-button routerLink="/funcionarios" routerLinkActive="active">Funcionários</button>
-      <button mat-button routerLink="/relatorios" routerLinkActive="active">Relatórios</button>
-    }
-  </div>
-
-  <div class="topbar-user">
-    <div>
-      <div class="user-name">{{ userName() }}</div>
-      <div class="user-role">{{ userRole() }}</div>
-    </div>
-    <div class="avatar">{{ userInitials() }}</div>
-    <button mat-icon-button class="logout-button" (click)="auth.logout()" aria-label="Sair" title="Sair">
-      <mat-icon>logout</mat-icon>
-    </button>
-  </div>
-</mat-toolbar>
-
-<!-- autosize: o conteúdo acompanha a largura do menu quando ele recolhe/expande. -->
-<mat-drawer-container class="layout-container" autosize>
-
-  <!-- MENU LATERAL: sempre aberto; recolhido mostra só os ícones (nome no tooltip). -->
-  <mat-drawer opened="true" mode="side" class="sidebar" [class.collapsed]="collapsed()">
-
-    <div class="menu-section">
-      <div class="menu-title">PRINCIPAL</div>
-      <a mat-list-item routerLink="/dashboard" class="menu-item" routerLinkActive="active"
-         [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
-        <mat-icon>dashboard</mat-icon>
-        <span class="menu-label">Dashboard</span>
-      </a>
-      <a mat-list-item routerLink="/mapa" class="menu-item" routerLinkActive="active"
-         [matTooltip]="collapsed() ? 'Mapa ao vivo' : ''" matTooltipPosition="right">
-        <mat-icon>near_me</mat-icon>
-        <span class="menu-label">Mapa ao vivo</span>
-      </a>
+    <div class="sidebar-user" [matTooltip]="collapsed() ? userName() : ''" matTooltipPosition="right">
+      <mat-icon>account_circle</mat-icon>
+      <span class="menu-label">{{ userName() }}</span>
     </div>
 
-    @if (auth.isGerente()) {
+    <nav class="sidebar-nav">
+      <!-- Seções seguem a rotina do gestor: acompanhar → resolver pendências → operar → cadastrar → analisar. -->
       <div class="menu-section">
-        <div class="menu-title">GESTÃO</div>
-        <a mat-list-item routerLink="/company" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Empresas' : ''" matTooltipPosition="right">
-          <mat-icon>business</mat-icon>
-          <span class="menu-label">Empresas</span>
+        <div class="menu-title">MONITORAMENTO</div>
+        <a routerLink="/dashboard" class="menu-item" routerLinkActive="active"
+           [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
+          <mat-icon>dashboard</mat-icon>
+          <span class="menu-label">Dashboard</span>
         </a>
-        <a mat-list-item routerLink="/gestores" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Gestores' : ''" matTooltipPosition="right">
-          <mat-icon>manage_accounts</mat-icon>
-          <span class="menu-label">Gestores</span>
+        <a routerLink="/mapa" class="menu-item" routerLinkActive="active"
+           [matTooltip]="collapsed() ? 'Mapa ao vivo' : ''" matTooltipPosition="right">
+          <mat-icon>near_me</mat-icon>
+          <span class="menu-label">Mapa ao vivo</span>
         </a>
+        @if (auth.isManager()) {
+          <a routerLink="/eventos-rota" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Ocorrências' : ''" matTooltipPosition="right">
+            <mat-icon>notification_important</mat-icon>
+            <span class="menu-label">Ocorrências</span>
+          </a>
+        }
       </div>
-    }
-    @if (auth.isManager()) {
-      <div class="menu-section">
-        <div class="menu-title">GESTÃO</div>
-        <a mat-list-item routerLink="/funcionarios" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Funcionários' : ''" matTooltipPosition="right">
-          <mat-icon>groups</mat-icon>
-          <span class="menu-label">Funcionários</span>
-        </a>
-        <a mat-list-item routerLink="/veiculos" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Veículos' : ''" matTooltipPosition="right">
-          <mat-icon>directions_bus</mat-icon>
-          <span class="menu-label">Veículos</span>
-        </a>
-        <a mat-list-item routerLink="/rotas" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Rotas' : ''" matTooltipPosition="right">
-          <mat-icon>route</mat-icon>
-          <span class="menu-label">Rotas</span>
-        </a>
-        <a mat-list-item routerLink="/horarios" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Horários' : ''" matTooltipPosition="right">
-          <mat-icon>schedule</mat-icon>
-          <span class="menu-label">Horários</span>
-        </a>
-        <a mat-list-item routerLink="/eventos-rota" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Eventos de Rota' : ''" matTooltipPosition="right">
-          <mat-icon>timeline</mat-icon>
-          <span class="menu-label">Eventos de Rota</span>
-        </a>
-        <a mat-list-item routerLink="/relatorios" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Relatórios' : ''" matTooltipPosition="right">
-          <mat-icon>description</mat-icon>
-          <span class="menu-label">Relatórios</span>
-        </a>
-      </div>
-    }
-
-    <div class="menu-section">
-      <div class="menu-title">CONFIG</div>
-      <a mat-list-item routerLink="/configuracoes" class="menu-item" routerLinkActive="active"
-         [matTooltip]="collapsed() ? 'Configurações' : ''" matTooltipPosition="right">
-        <mat-icon>settings</mat-icon>
-        <span class="menu-label">Configurações</span>
-      </a>
+  
       @if (auth.isGerente()) {
-        <a mat-list-item [href]="adminUrl" target="_blank" rel="noopener" class="menu-item"
-           [matTooltip]="collapsed() ? 'Administração' : ''" matTooltipPosition="right">
-          <mat-icon>admin_panel_settings</mat-icon>
-          <span class="menu-label">Administração</span>
-          <mat-icon class="menu-external">open_in_new</mat-icon>
-        </a>
+        <div class="menu-section">
+          <div class="menu-title">CLIENTES</div>
+          <a routerLink="/company" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Empresas' : ''" matTooltipPosition="right">
+            <mat-icon>business</mat-icon>
+            <span class="menu-label">Empresas</span>
+          </a>
+          <a routerLink="/gestores" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Gestores' : ''" matTooltipPosition="right">
+            <mat-icon>manage_accounts</mat-icon>
+            <span class="menu-label">Gestores</span>
+          </a>
+        </div>
       }
-    </div>
+      @if (auth.isManager()) {
+        <!-- Caixa de entrada: pedidos dos colaboradores que esperam ação do gestor (contador no item). -->
+        <div class="menu-section">
+          <div class="menu-title">SOLICITAÇÕES</div>
+          <a routerLink="/enderecos" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Endereços (' + addressReviews.pendingCount() + ' pendentes)' : ''" matTooltipPosition="right">
+            <mat-icon>home_pin</mat-icon>
+            <span class="menu-label">Endereços</span>
+            @if (addressReviews.pendingCount() > 0) {
+              <span class="menu-badge" [attr.aria-label]="addressReviews.pendingCount() + ' endereços para aprovar'">{{ addressReviews.pendingCount() }}</span>
+            }
+          </a>
+        </div>
+  
+        <div class="menu-section">
+          <div class="menu-title">OPERAÇÃO</div>
+          <a routerLink="/rotas" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Rotas' : ''" matTooltipPosition="right">
+            <mat-icon>route</mat-icon>
+            <span class="menu-label">Rotas</span>
+          </a>
+          <a routerLink="/horarios" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Horários' : ''" matTooltipPosition="right">
+            <mat-icon>schedule</mat-icon>
+            <span class="menu-label">Horários</span>
+          </a>
+          <a routerLink="/planejamento" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Planejamento (IA)' : ''" matTooltipPosition="right">
+            <mat-icon>auto_awesome</mat-icon>
+            <span class="menu-label">Planejamento (IA)</span>
+          </a>
+        </div>
+  
+        <div class="menu-section">
+          <div class="menu-title">CADASTROS</div>
+          <a routerLink="/funcionarios" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Funcionários' : ''" matTooltipPosition="right">
+            <mat-icon>groups</mat-icon>
+            <span class="menu-label">Funcionários</span>
+          </a>
+          <a routerLink="/veiculos" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Veículos' : ''" matTooltipPosition="right">
+            <mat-icon>directions_bus</mat-icon>
+            <span class="menu-label">Veículos</span>
+          </a>
+        </div>
+  
+        <div class="menu-section">
+          <div class="menu-title">ANÁLISE</div>
+          <a routerLink="/relatorios" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Relatórios' : ''" matTooltipPosition="right">
+            <mat-icon>description</mat-icon>
+            <span class="menu-label">Relatórios</span>
+          </a>
+        </div>
+      }
+  
+      <div class="menu-section">
+        <div class="menu-title">CONFIG</div>
+        <a routerLink="/configuracoes" class="menu-item" routerLinkActive="active"
+           [matTooltip]="collapsed() ? 'Configurações' : ''" matTooltipPosition="right">
+          <mat-icon>settings</mat-icon>
+          <span class="menu-label">Configurações</span>
+        </a>
+        @if (auth.isGerente()) {
+          <a [href]="adminUrl" target="_blank" rel="noopener" class="menu-item"
+             [matTooltip]="collapsed() ? 'Administração' : ''" matTooltipPosition="right">
+            <mat-icon>admin_panel_settings</mat-icon>
+            <span class="menu-label">Administração</span>
+            <mat-icon class="menu-external">open_in_new</mat-icon>
+          </a>
+        }
+      </div>
+  
+    </nav>
+  </aside>
 
-  </mat-drawer>
+  <!-- Fundo escurecido atrás do menu aberto no celular; tocar fecha. -->
+  <div class="backdrop" (click)="mobileOpen.set(false)" aria-hidden="true"></div>
 
-  <!-- CONTEÚDO -->
-  <mat-drawer-content class="content">
-    <router-outlet></router-outlet>
-  </mat-drawer-content>
+  <div class="main">
+    <header class="topbar">
+      <button mat-icon-button class="topbar-toggle" (click)="toggleSidebar()"
+              [attr.aria-label]="collapsed() ? 'Expandir menu' : 'Recolher menu'"
+              [attr.aria-expanded]="!collapsed()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <nav class="topbar-links">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Início</a>
+      </nav>
 
-</mat-drawer-container>
+      <button mat-icon-button class="topbar-theme" (click)="theme.toggle()"
+              [matTooltip]="theme.theme() === 'dark' ? 'Modo claro' : 'Modo escuro'"
+              [attr.aria-label]="theme.theme() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'">
+        <mat-icon>{{ theme.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+
+      <div class="topbar-user">
+        <div class="user-text">
+          <div class="user-name">{{ userName() }}</div>
+          <div class="user-role">{{ userRole() }}</div>
+        </div>
+        <div class="avatar" aria-hidden="true">{{ userInitials() }}</div>
+        <button mat-icon-button class="logout-button" (click)="auth.logout()" aria-label="Sair" matTooltip="Sair">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      @if (heading(); as page) {
+        <div class="page-heading">
+          <h1>{{ page.title }}</h1>
+          <nav class="breadcrumb" aria-label="Você está em">
+            <a routerLink="/dashboard">Início</a>
+            @if (page.section) {
+              <span class="sep">/</span><span>{{ page.section }}</span>
+            }
+            @if (page.listTitle) {
+              <span class="sep">/</span><a [routerLink]="page.listUrl">{{ page.listTitle }}</a>
+            }
+            <span class="sep">/</span><span class="current">{{ page.title }}</span>
+          </nav>
+        </div>
+      }
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

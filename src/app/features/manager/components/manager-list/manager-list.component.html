@@ -1,6 +1,5 @@
-<mat-card class="list-card p-4">
+<mat-card class="list-card">
   <div class="list-header">
-    <h2>Gestores</h2>
     <button mat-raised-button color="primary" routerLink="novo">
       <mat-icon>add</mat-icon>
       Novo Gestor
@@ -8,7 +7,7 @@
   </div>
 
   <div class="table-wrapper">
-    <table mat-table [dataSource]="managers" class="mat-elevation-z1 w-full list-table">
+    <table mat-table [dataSource]="managers" class="list-table">
 
       <!-- Nome -->
       <ng-container matColumnDef="name">

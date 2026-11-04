@@ -1,0 +1,168 @@
+<mat-card class="page-card">
+  <div class="page-header">
+    <div>
+      <p class="muted">
+        O colaborador informa o novo endereço no app (localização atual ou digitado, já conferido no mapa).
+        Ele só passa a valer, inclusive no planejamento de rotas, depois que você aprovar.
+      </p>
+    </div>
+    <button mat-stroked-button (click)="load()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      Atualizar
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+  }
+
+  <mat-tab-group animationDuration="0ms">
+    <mat-tab [label]="'Pendentes (' + pending().length + ')'">
+      @if (loading()) {
+        <div class="center"><mat-spinner diameter="32"></mat-spinner></div>
+      } @else {
+        @for (item of pending(); track item.id) {
+          <article class="request">
+            <header class="request-header">
+              <div class="avatar">{{ item.person.name.charAt(0) }}</div>
+              <div class="who">
+                <strong>{{ item.person.name }}</strong>
+                <span class="muted">{{ item.person.code || 'sem matrícula' }} · {{ origin(item.address) }}</span>
+              </div>
+              <button mat-stroked-button (click)="askAssistant(item)" matTooltip="Abre o assistente de IA com a pergunta pronta">
+                <mat-icon>auto_awesome</mat-icon>
+                Perguntar ao assistente
+              </button>
+            </header>
+
+            <div class="compare">
+              <div class="side">
+                <span class="label">Endereço atual</span>
+                @if (item.previous_address; as previous) {
+                  <span>{{ addressLine(previous) }}</span>
+                  <a [href]="mapsLink(previous)" target="_blank" rel="noopener" class="map-link">ver no mapa</a>
+                } @else {
+                  <span class="warn-text">Sem endereço (fora do planejamento de rotas)</span>
+                }
+              </div>
+              <mat-icon class="arrow">arrow_forward</mat-icon>
+              <div class="side new">
+                <span class="label">Novo endereço</span>
+                <span>{{ addressLine(item.address) }}</span>
+                <a [href]="mapsLink(item.address)" target="_blank" rel="noopener" class="map-link">ver no mapa</a>
+              </div>
+            </div>
+
+            <div class="facts">
+              @if (item.moved_m != null) {
+                <span><mat-icon>straighten</mat-icon>{{ distance(item.moved_m) }} do endereço atual</span>
+              }
+              @if (item.nearest_point; as point) {
+                <span><mat-icon>place</mat-icon>Ponto mais próximo: {{ point.name }} ({{ distance(point.distance_m) }})</span>
+              }
+              @if (item.address.precision === 'approximate') {
+                <span class="warn-text"><mat-icon>warning_amber</mat-icon>Google achou só a rua; posição ajustada pelo colaborador</span>
+              }
+            </div>
+
+            @if (item.current_routes.length) {
+              <div class="current">
+                <span class="label">Rotas atuais</span>
+                @for (route of item.current_routes; track route.route_id) {
+                  <span class="chip">{{ route.name }}{{ route.arrival ? ' · ' + route.arrival : '' }} · embarca em {{ route.stop || 'ponto não definido' }}</span>
+                }
+              </div>
+            }
+
+            <div class="assign">
+              <span class="label">Incluir em rota fixa</span>
+              <mat-radio-group [(ngModel)]="decisions[item.id].routeId" class="suggestions">
+                <mat-radio-button [value]="null">Não incluir em outra rota agora</mat-radio-button>
+                @for (suggestion of item.suggestions; track suggestion.route_id) {
+                  <mat-radio-button [value]="suggestion.route_id"
+                                    [disabled]="suggestion.free_seats === 0 && !suggestion.already_on_route">
+                    <span class="suggestion">
+                      <strong>{{ suggestionLabel(suggestion) }}</strong>
+                      <span class="muted">
+                        @if (suggestion.pickup === 'home') {
+                          embarque na porta de casa (nenhum ponto a menos de 500 m) ·
+                        } @else if (suggestion.pickup === 'new_point') {
+                          nova parada em {{ suggestion.pickup_point }} (a menos de 500 m da casa) ·
+                        } @else {
+                          parada {{ suggestion.stop }} a {{ distance(suggestion.distance_m) }} ·
+                        }
+                        {{ suggestion.free_seats }} de {{ suggestion.capacity }} lugares livres
+                        @if (suggestion.already_on_route) { · <em>já está nesta rota</em> }
+                        @if (suggestion.far) { · <span class="warn-text">longe da casa</span> }
+                      </span>
+                    </span>
+                  </mat-radio-button>
+                } @empty {
+                  <span class="muted small">Nenhuma rota fixa passa a menos de 2 km do novo endereço. Use o assistente para planejar.</span>
+                }
+              </mat-radio-group>
+              @if (item.current_routes.length) {
+                <mat-checkbox [(ngModel)]="decisions[item.id].updateCurrentStops">
+                  Nas rotas atuais, trocar o embarque para a parada mais perto do novo endereço
+                </mat-checkbox>
+              }
+            </div>
+
+            @if (decisions[item.id].rejecting) {
+              <div class="reject-box">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reason">
+                  <mat-label>Motivo da recusa (aparece para o colaborador)</mat-label>
+                  <input matInput [(ngModel)]="decisions[item.id].reason" maxlength="255"
+                         placeholder="Ex.: o endereço é o da empresa, não o da sua casa">
+                </mat-form-field>
+                <button mat-button (click)="decisions[item.id].rejecting = false">Cancelar</button>
+                <button mat-flat-button color="warn" (click)="reject(item)"
+                        [disabled]="!decisions[item.id].reason.trim() || decisions[item.id].busy">
+                  Confirmar recusa
+                </button>
+              </div>
+            } @else {
+              <footer class="actions">
+                <button mat-stroked-button color="warn" (click)="decisions[item.id].rejecting = true" [disabled]="decisions[item.id].busy">
+                  <mat-icon>close</mat-icon>
+                  Recusar
+                </button>
+                <button mat-flat-button color="primary" (click)="approve(item)" [disabled]="decisions[item.id].busy">
+                  <mat-icon>check</mat-icon>
+                  {{ decisions[item.id].routeId ? 'Aprovar e incluir na rota' : 'Aprovar' }}
+                </button>
+              </footer>
+            }
+          </article>
+        } @empty {
+          <div class="empty">
+            <mat-icon>task_alt</mat-icon>
+            <p>Nenhum endereço aguardando aprovação.</p>
+          </div>
+        }
+      }
+    </mat-tab>
+
+    <mat-tab label="Revisados">
+      @for (item of reviewed(); track item.id) {
+        <div class="reviewed-row">
+          <span class="status" [class.approved]="item.status === 'approved'" [class.rejected]="item.status === 'rejected'">
+            {{ statusLabel(item) }}
+          </span>
+          <div class="who">
+            <strong>{{ item.person.name }}</strong>
+            <span class="muted small">{{ addressLine(item.address) }}</span>
+            @if (item.address.review_note) {
+              <span class="muted small">Obs.: {{ item.address.review_note }}</span>
+            }
+          </div>
+          <span class="muted small">
+            {{ item.reviewed_by || 'sistema' }} · {{ item.address.reviewed_at | date: 'dd/MM/yyyy HH:mm' }}
+          </span>
+        </div>
+      } @empty {
+        <p class="muted empty-text">Nenhum endereço revisado ainda.</p>
+      }
+    </mat-tab>
+  </mat-tab-group>
+</mat-card>

@@ -5,6 +5,8 @@ import {MatButton} from '@angular/material/button';
 export interface DialogData {
   message?: string;
   description?: string;
+  /** Texto do botão de confirmação (padrão: "Deletar"). */
+  confirmLabel?: string;
 }
 
 @Component({

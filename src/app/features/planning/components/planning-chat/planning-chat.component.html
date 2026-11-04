@@ -1,0 +1,213 @@
+<div class="planning-page">
+  <mat-card class="chat-card">
+    <div class="chat-header">
+      <div>
+        <p class="subtitle">Rotas avulsas para um dia: cole a lista de colaboradores e diga a data, o horário e o limite de rotas.</p>
+      </div>
+      <div class="header-actions">
+        @if (conversations().length) {
+          <mat-form-field appearance="outline" class="history-select" subscriptSizing="dynamic">
+            <mat-label>Planejamentos</mat-label>
+            <mat-select [value]="current()?.id" (selectionChange)="open($event.value)">
+              @for (item of conversations(); track item.id) {
+                <mat-option [value]="item.id">{{ conversationLabel(item) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <button mat-stroked-button (click)="startNew()" [disabled]="sending()">
+          <mat-icon>add</mat-icon>
+          Novo
+        </button>
+      </div>
+    </div>
+
+    <div class="messages">
+      @if (!current()?.messages?.length && !pending()) {
+        <div class="empty">
+          <mat-icon>auto_awesome</mat-icon>
+          <p>Exemplo: <em>"Amanhã, dia 30, preciso de rotas para estes 50 colaboradores, chegada às 10:30, até 5 rotas"</em> e a lista logo abaixo (nomes, matrículas ou e-mails).</p>
+          <button mat-button color="primary" (click)="useExample()">Usar este modelo</button>
+        </div>
+      }
+      @for (message of current()?.messages ?? []; track $index) {
+        <div class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+          <div class="bubble" [innerHTML]="formatMessage(message.text)"></div>
+        </div>
+      }
+      @if (pending(); as text) {
+        <div class="message user">
+          <div class="bubble" [innerHTML]="formatMessage(text)"></div>
+        </div>
+        <div class="message assistant">
+          <div class="bubble thinking">
+            <mat-spinner diameter="18"></mat-spinner>
+            <span>Analisando endereços, motoristas e montando as rotas…</span>
+          </div>
+        </div>
+      }
+      <div #messagesEnd></div>
+    </div>
+
+    @if (error(); as message) {
+      <div class="error-banner">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ message }}</span>
+      </div>
+    }
+
+    @if (current()?.status === 'approved') {
+      <div class="approved-banner">
+        <mat-icon>check_circle</mat-icon>
+        <span>Plano aprovado. Para outro dia ou ajustes, comece um novo planejamento.</span>
+      </div>
+    }
+
+    @if (uploading()) {
+      <div class="attachment"><mat-spinner diameter="18"></mat-spinner><span>Conferindo a lista com o cadastro…</span></div>
+    }
+    @if (attachment(); as list) {
+      <div class="attachment">
+        <mat-icon class="attachment-icon">description</mat-icon>
+        <div class="attachment-info">
+          <strong>{{ list.file_name }}</strong>
+          <span class="muted">
+            {{ list.matched.length }} de {{ list.rows }} encontrados
+            @if (list.not_found.length) { · {{ list.not_found.length }} não encontrados }
+            @if (list.ambiguous.length) { · {{ list.ambiguous.length }} ambíguos }
+            @if (list.duplicates) { · {{ list.duplicates }} repetidos }
+          </span>
+          @if (listIssues(list); as issues) {
+            @if (issues.length) {
+              <details>
+                <summary>Conferir {{ issues.length }} linha(s)</summary>
+                <ul>
+                  @for (issue of issues; track $index) {
+                    <li>{{ issue }}</li>
+                  }
+                </ul>
+              </details>
+            }
+          }
+        </div>
+        <button mat-icon-button (click)="removeAttachment()" [disabled]="sending()" matTooltip="Remover lista" aria-label="Remover lista">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+
+    <div class="composer">
+      <input #fileInput type="file" accept=".csv,.xlsx" hidden (change)="onFileSelected($event)">
+      <div class="composer-tools">
+        <button mat-icon-button (click)="fileInput.click()" [disabled]="sending() || uploading()"
+                matTooltip="Anexar lista de colaboradores (.csv ou .xlsx com matrícula e nome)" aria-label="Anexar lista">
+          <mat-icon>attach_file</mat-icon>
+        </button>
+        <button mat-icon-button (click)="downloadTemplate()" matTooltip="Baixar modelo da lista (.csv)" aria-label="Baixar modelo da lista">
+          <mat-icon>download</mat-icon>
+        </button>
+      </div>
+      <mat-form-field appearance="outline" class="composer-input" subscriptSizing="dynamic">
+        <mat-label>Mensagem ao assistente</mat-label>
+        <textarea matInput [(ngModel)]="draft" (keydown)="onKeydown($event)" rows="3"
+                  [disabled]="sending()"
+                  [placeholder]="attachment() ? 'Ex.: amanhã, chegada às 10:30, até 5 rotas' : 'Ex.: passa a Ana Souza para a rota 2'"></textarea>
+        <mat-hint>Enter envia · Shift+Enter quebra linha</mat-hint>
+      </mat-form-field>
+      <button mat-flat-button color="primary" class="send-button" (click)="send()" [disabled]="!canSend()">
+        <mat-icon>send</mat-icon>
+        Enviar
+      </button>
+    </div>
+  </mat-card>
+
+  <mat-card class="side-card">
+    <mat-tab-group animationDuration="0ms">
+      <mat-tab label="Plano">
+        @if (current()?.plan; as plan) {
+          @if (plan.error) {
+            <p class="muted p-3">{{ plan.error }}</p>
+          } @else {
+            <div class="plan-summary">
+              <div>
+                <strong>{{ plan.weekday }}, {{ formatDate(plan.date) }}</strong>
+                <span class="muted"> · chegada {{ plan.arrival }}</span>
+              </div>
+              <div class="muted">{{ plan.total_passengers }} colaboradores em {{ plan.routes.length }} rota(s)</div>
+            </div>
+
+            @for (warning of plan.warnings; track $index) {
+              <div class="warning"><mat-icon>warning_amber</mat-icon><span>{{ warning }}</span></div>
+            }
+
+            @for (route of plan.routes; track route.number) {
+              <div class="route-card">
+                <div class="route-head">
+                  <span class="route-number">{{ route.number }}</span>
+                  <div class="route-title">
+                    <strong>{{ route.driver.name }}</strong>
+                    <span class="muted">{{ route.vehicle.model }} · {{ route.vehicle.plate }}</span>
+                  </div>
+                  <span class="load" [class.full]="route.load > route.vehicle.capacity * 0.9"
+                        matTooltip="Passageiros / lugares">{{ route.load }}/{{ route.vehicle.capacity }}</span>
+                </div>
+                <div class="route-meta muted">
+                  Saída {{ route.departure }} · {{ route.duration_min }} min · {{ route.distance_km }} km
+                </div>
+                <ol class="stops">
+                  @for (stop of route.stops; track stop.order) {
+                    <li>
+                      <span class="eta">{{ stop.eta }}</span>
+                      <span class="point">{{ stop.point }}</span>
+                      <span class="count" [matTooltip]="passengerNames(stop)">
+                        <mat-icon>person</mat-icon>{{ stop.passengers.length }}
+                      </span>
+                    </li>
+                  }
+                  <li class="destination">
+                    <span class="eta">{{ plan.arrival }}</span>
+                    <span class="point">Empresa</span>
+                  </li>
+                </ol>
+              </div>
+            }
+
+            @if (plan.times_are_estimates) {
+              <p class="muted small">Horários estimados pela distância; o trânsito do dia pode variar.</p>
+            }
+
+            @if (current()?.status === 'draft') {
+              <button mat-flat-button color="primary" class="approve-button" (click)="approve()"
+                      [disabled]="approving() || sending()">
+                @if (approving()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <mat-icon>task_alt</mat-icon>
+                }
+                Aprovar plano
+              </button>
+            } @else {
+              <div class="created-routes">
+                <strong>Rotas criadas</strong>
+                @for (route of current()?.routes ?? []; track route.id) {
+                  <div class="muted">{{ route.name }}</div>
+                }
+              </div>
+            }
+          }
+        } @else {
+          <div class="empty side-empty">
+            <mat-icon>route</mat-icon>
+            <p>O plano aparece aqui assim que o assistente montar as rotas.</p>
+          </div>
+        }
+      </mat-tab>
+
+      <mat-tab label="Pontos de embarque">
+        <ng-template matTabContent>
+          <app-pickup-suggestions></app-pickup-suggestions>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card>
+</div>
