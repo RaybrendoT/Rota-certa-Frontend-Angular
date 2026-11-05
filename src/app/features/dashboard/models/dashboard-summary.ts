@@ -25,6 +25,10 @@ export interface DashboardSummary {
     tolerance_minutes: number;
   };
   shifts: DashboardShift[];
+  /** Turnos que rodam no dia (botões do filtro), com ou sem filtro aplicado. */
+  available_shifts: { id: number; time: string }[];
+  /** Rotas consideradas (respeita o filtro de turno): o feed ao vivo usa para filtrar. */
+  route_ids: number[];
 }
 
 export interface DashboardShift {
@@ -86,4 +90,36 @@ export interface DashboardFeedItem {
 export interface DashboardFeed {
   date: string;
   items: DashboardFeedItem[];
+}
+
+/** Resposta de GET /api/dashboard/trends/?days=7|14|30. */
+export interface DashboardTrends {
+  days: number;
+  from: string;
+  to: string;
+  daily: DashboardTrendDay[];
+  routes: DashboardTrendRoute[];
+}
+
+export interface DashboardTrendDay {
+  date: string;
+  routes: number;
+  finished: number;
+  expected: number;
+  confirmed: number;
+  absent: number;
+  pending: number;
+  on_time: number;
+  late: number;
+  punctuality_rate: number | null;
+  delays: number;
+  incidents: number;
+}
+
+export interface DashboardTrendRoute {
+  route_id: number;
+  name: string;
+  expected: number;
+  absent: number;
+  rate: number | null;
 }

@@ -58,6 +58,36 @@
 
 .updated { margin: -8px 0 0; font-size: 13px; }
 
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shift-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+
+  button {
+    padding: 4px 12px;
+    border: 1px solid var(--rc-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--rc-text-2);
+    font: inherit;
+    cursor: pointer;
+
+    &.active { border-color: var(--rc-link); background: var(--rc-info-bg); color: var(--rc-info-text); font-weight: 600; }
+  }
+}
+
+.shortcuts { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* ---------- avisos ---------- */
 .error-banner {
   display: flex;

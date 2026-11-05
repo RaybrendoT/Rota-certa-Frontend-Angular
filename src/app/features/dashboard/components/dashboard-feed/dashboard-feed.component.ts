@@ -34,6 +34,10 @@ export class DashboardFeedComponent {
   readonly realtime = inject(RealtimeService);
 
   readonly date = input.required<string>();
+  /** Turno filtrado no painel (null = todos). */
+  readonly schedule = input<number | null>(null);
+  /** Rotas do turno filtrado: mensagens ao vivo de outras rotas são ignoradas. */
+  readonly routeFilter = input<Set<number> | null>(null);
   readonly live = input.required<boolean>();
   readonly activity = output<void>();
 
@@ -48,7 +52,8 @@ export class DashboardFeedComponent {
 
     effect(() => {
       const date = this.date();
-      untracked(() => this.load(date));
+      const schedule = this.schedule();
+      untracked(() => this.load(date, schedule));
     });
 
     effect((onCleanup) => {
@@ -65,15 +70,17 @@ export class DashboardFeedComponent {
       .subscribe((message) => {
         if (!this.live()) return;
         const item = message as unknown as DashboardFeedItem;
+        const allowed = this.routeFilter();
+        if (allowed && !allowed.has(item.route_id)) return;
         if (item.type === 'boarding_status' && item.status === 'pending') return;
         this.add({ ...item, timestamp: item.timestamp ?? new Date().toISOString() });
         this.activity.emit();
       });
   }
 
-  load(date: string): void {
+  load(date: string, schedule: number | null = null): void {
     this.loading.set(true);
-    this.service.feed(date).subscribe({
+    this.service.feed({ date, schedule }).subscribe({
       next: (data) => {
         this.items.set(data.items);
         this.error.set(false);

@@ -10,12 +10,25 @@ import { DashboardAlerts, DashboardShift, DashboardSummary } from '../../models/
 import { DashboardService } from '../../service/dashboard.service';
 import { DashboardAlertsComponent } from '../dashboard-alerts/dashboard-alerts.component';
 import { DashboardFeedComponent } from '../dashboard-feed/dashboard-feed.component';
+import { DashboardTrendsComponent } from '../dashboard-trends/dashboard-trends.component';
 
 /** Fuso da operação: o "hoje" do painel é o de Manaus, igual ao backend. */
 const OPERATION_TZ = 'America/Manaus';
 const AUTO_REFRESH_MS = 60_000;
 /** Espera depois de um evento ao vivo antes de recarregar os números (agrupa rajadas). */
 const LIVE_REFRESH_DELAY_MS = 3_000;
+
+/** Turno escolhido no filtro: conveniência do navegador, some sem problema se o storage falhar. */
+const SHIFT_KEY = 'rotacerta.dashboard.shift';
+
+function readShift(): number | null {
+  try {
+    const saved = Number(localStorage.getItem(SHIFT_KEY));
+    return Number.isInteger(saved) && saved > 0 ? saved : null;
+  } catch {
+    return null;
+  }
+}
 
 function todayInOperation(): string {
   // en-CA formata como AAAA-MM-DD.
@@ -25,7 +38,7 @@ function todayInOperation(): string {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [DashboardAlertsComponent, DashboardFeedComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
+  imports: [DashboardAlertsComponent, DashboardFeedComponent, DashboardTrendsComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss',
 })
@@ -35,6 +48,10 @@ export class DashboardPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly date = signal(todayInOperation());
+  readonly shift = signal<number | null>(readShift());
+  readonly exporting = signal(false);
+  /** Rotas do turno filtrado (null = todas): o feed ao vivo descarta mensagens de outras rotas. */
+  readonly routeFilter = computed(() => (this.shift() ? new Set(this.summary()?.route_ids ?? []) : null));
   readonly summary = signal<DashboardSummary | null>(null);
   readonly alerts = signal<DashboardAlerts | null>(null);
   readonly alertsError = signal(false);
@@ -75,15 +92,21 @@ export class DashboardPageComponent implements OnInit {
   load(silent = false): void {
     if (!silent) this.loading.set(true);
     // Alertas vêm à parte: se falharem, o resumo continua aparecendo.
-    this.service.alerts(this.date()).subscribe({
+    const filter = { date: this.date(), schedule: this.shift() };
+    this.service.alerts(filter).subscribe({
       next: (data) => {
         this.alerts.set(data);
         this.alertsError.set(false);
       },
       error: () => this.alertsError.set(true),
     });
-    this.service.summary(this.date()).subscribe({
+    this.service.summary(filter).subscribe({
       next: (data) => {
+        // Turno salvo que não roda neste dia: volta para "todos" em vez de mostrar tudo zerado.
+        if (this.shift() && !data.available_shifts.some((s) => s.id === this.shift())) {
+          this.setShift(null);
+          return;
+        }
         this.summary.set(data);
         this.error.set(null);
         this.loading.set(false);
@@ -104,6 +127,38 @@ export class DashboardPageComponent implements OnInit {
       this.liveRefresh = null;
       this.load(true);
     }, LIVE_REFRESH_DELAY_MS);
+  }
+
+  setShift(id: number | null): void {
+    this.shift.set(id);
+    try {
+      if (id) localStorage.setItem(SHIFT_KEY, String(id));
+      else localStorage.removeItem(SHIFT_KEY);
+    } catch {
+      // Sem storage: o filtro vale só nesta visita.
+    }
+    // Mantém o resumo anterior na tela enquanto recarrega (as tendências não são recriadas).
+    this.load();
+  }
+
+  /** Baixa o CSV do dia (e do turno filtrado) para abrir no Excel. */
+  exportCsv(): void {
+    this.exporting.set(true);
+    this.service.exportCsv({ date: this.date(), schedule: this.shift() }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `rotacerta-resumo-${this.date()}.csv`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        this.exporting.set(false);
+      },
+      error: (err) => {
+        this.error.set(extractErrorMessage(err, 'Não foi possível exportar o resumo.'));
+        this.exporting.set(false);
+      },
+    });
   }
 
   changeDate(value: string): void {

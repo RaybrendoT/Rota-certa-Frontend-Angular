@@ -29,8 +29,33 @@
         <mat-icon>refresh</mat-icon>
         Atualizar
       </button>
+      <button mat-stroked-button (click)="exportCsv()" [disabled]="exporting() || !summary()?.routes?.total"
+        matTooltip="Uma linha por rota do dia (e do turno filtrado), para abrir no Excel">
+        <mat-icon>download</mat-icon>
+        Exportar CSV
+      </button>
     </div>
   </header>
+
+  <div class="toolbar">
+    @if (summary()?.available_shifts?.length) {
+      <div class="shift-filter" role="radiogroup" aria-label="Filtrar por turno">
+        <span class="muted">Turno:</span>
+        <button type="button" role="radio" [attr.aria-checked]="!shift()" [class.active]="!shift()" (click)="setShift(null)">Todos</button>
+        @for (s of summary()!.available_shifts; track s.id) {
+          <button type="button" role="radio" [attr.aria-checked]="shift() === s.id" [class.active]="shift() === s.id" (click)="setShift(s.id)">
+            {{ s.time }}
+          </button>
+        }
+      </div>
+    }
+    <nav class="shortcuts" aria-label="Atalhos">
+      <a mat-stroked-button routerLink="/planejamento"><mat-icon>auto_awesome</mat-icon>Planejar rotas</a>
+      <a mat-stroked-button routerLink="/rotas/novo"><mat-icon>add_road</mat-icon>Nova rota</a>
+      <a mat-stroked-button routerLink="/funcionarios/novo"><mat-icon>person_add</mat-icon>Novo funcionário</a>
+      <a mat-stroked-button routerLink="/mapa"><mat-icon>map</mat-icon>Mapa ao vivo</a>
+    </nav>
+  </div>
 
   @if (updatedAt(); as time) {
     <p class="updated muted">
@@ -65,6 +90,7 @@
       @if (alerts(); as a) {
         <app-dashboard-alerts [alerts]="a" />
       }
+      <app-dashboard-trends />
     } @else {
       <div class="cards">
         <article class="card">
@@ -141,7 +167,7 @@
         <p class="muted alerts-error">Não foi possível carregar as pendências. Elas voltam na próxima atualização.</p>
       }
 
-      <app-dashboard-feed [date]="date()" [live]="isToday()" (activity)="onLiveActivity()" />
+      <app-dashboard-feed [date]="date()" [schedule]="shift()" [routeFilter]="routeFilter()" [live]="isToday()" (activity)="onLiveActivity()" />
 
       <article class="page-card shifts">
         <h3>Por turno</h3>
@@ -187,6 +213,8 @@
           O status da rota sai dos eventos de partida e chegada enviados pelo app do motorista.
         </p>
       </article>
+
+      <app-dashboard-trends />
     }
   }
 </section>
