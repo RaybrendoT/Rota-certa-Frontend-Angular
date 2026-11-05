@@ -1,13 +1,16 @@
-# CI/CD do painel (Angular + nginx).
+# CI/CD do painel (Angular): build → deploy na EC2.
 #
-#   PR e push   → npm ci e build de produção.
-#   push na main → imagem no Docker Hub (<usuário>/rotacerta-frontend:sha-xxxxxxx e :latest)
-#                  e deploy no k3s da EC2 (troca a imagem do deployment "frontend"). A URL da API
-#                  vem de API_BASE_URL na subida do container (padrão /api, mesma origem).
+# - Pull request: npm ci e build de produção.
+# - Push na main: o mesmo e, por SSH na EC2, atualiza o clone do Angular e reconstrói só o
+#   container "frontend" da stack de produção (deploy/docker-compose.yml do backend, com Caddy).
+# - Actions → CI/CD → Run workflow: o mesmo da main, com a opção de pular o deploy.
 #
-# Secrets do repositório (Settings → Secrets and variables → Actions):
-#   DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD (use um access token do Docker Hub),
-#   EC2_HOST, EC2_USER, EC2_SSH_KEY (conteúdo do .pem).
+# Mesma configuração do backend (Settings → Secrets and variables → Actions):
+#   Variables: EC2_HOST (obrigatória p/ o deploy), EC2_USER (padrão ubuntu), DEPLOY_DOMAIN (confere a página
+#              no fim), DEPLOY_PATH (padrão ~/rotacerta/rota-certa-backend-django),
+#              FRONTEND_PATH (padrão ~/rotacerta/rota-certa-frontend-angular)
+#   Secrets:   EC2_SSH_KEY (chave privada .pem), EC2_SSH_KNOWN_HOSTS (opcional, saída do ssh-keyscan)
+# Sem EC2_HOST o pipeline para depois do build.
 name: CI/CD
 
 on:
@@ -15,24 +18,29 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Fazer o deploy na EC2 depois do build
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-cd-${{ github.ref }}
+  # Em PR, um push novo cancela a execução antiga. Na main, nunca cancela um deploy no meio.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-env:
-  IMAGE_NAME: rotacerta-frontend
-  K8S_NAMESPACE: rota-certa
-  K8S_DEPLOYMENT: frontend
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: npm
@@ -43,69 +51,88 @@ jobs:
       - name: Build de produção
         run: npx ng build --configuration production
 
-  image:
-    name: Imagem no Docker Hub
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.tag.outputs.image }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - id: tag
-        run: echo "image=${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ steps.tag.outputs.image }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
-    name: Deploy no k3s (EC2)
-    needs: image
+    name: Deploy na EC2
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name != 'pull_request'
+      && vars.EC2_HOST != ''
+      && (github.event_name == 'push' || inputs.deploy)
     runs-on: ubuntu-latest
-    environment: production
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_DOMAIN && format('https://{0}/', vars.DEPLOY_DOMAIN) || '' }}
     concurrency:
-      group: deploy-frontend
+      # O mesmo grupo do deploy do backend: os dois nunca mexem na stack ao mesmo tempo.
+      group: deploy-production
       cancel-in-progress: false
+    env:
+      EC2_HOST: ${{ vars.EC2_HOST }}
+      EC2_USER: ${{ vars.EC2_USER || 'ubuntu' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '~/rotacerta/rota-certa-backend-django' }}
+      FRONTEND_PATH: ${{ vars.FRONTEND_PATH || '~/rotacerta/rota-certa-frontend-angular' }}
     steps:
-      - name: Atualizar o deployment
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Chave SSH
         env:
-          IMAGE: ${{ needs.image.outputs.image }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-          NS: ${{ env.K8S_NAMESPACE }}
-          DEPLOY: ${{ env.K8S_DEPLOYMENT }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: IMAGE,DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,NS,DEPLOY
-          script_stop: true
-          script: |
-            set -euo pipefail
-            KUBECTL="sudo k3s kubectl -n $NS"
-            # Credencial para o k3s baixar imagem privada do Docker Hub (recriada a cada deploy).
-            $KUBECTL create secret docker-registry dockerhub \
-              --docker-server=https://index.docker.io/v1/ \
-              --docker-username="$DOCKERHUB_USERNAME" --docker-password="$DOCKERHUB_PASSWORD" \
-              --dry-run=client -o yaml | $KUBECTL apply -f -
-            $KUBECTL patch deployment "$DEPLOY" --type merge \
-              -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"dockerhub"}]}}}}'
-            $KUBECTL set image deployment/"$DEPLOY" frontend="$IMAGE"
-            $KUBECTL rollout status deployment/"$DEPLOY" --timeout=300s
-            echo "Painel em produção: $IMAGE"
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_SSH_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::Falta o secret EC2_SSH_KEY (chave privada da EC2)."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # tr -d '\r': chave copiada no Windows chega com CRLF e o OpenSSH recusa ("error in libcrypto").
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/ec2 && chmod 600 ~/.ssh/ec2
+          if ! ssh-keygen -y -f ~/.ssh/ec2 > /dev/null 2>&1; then
+            echo "::error::EC2_SSH_KEY não é uma chave privada válida. Cole o arquivo inteiro SEM .pub, das linhas -----BEGIN ... até -----END ... PRIVATE KEY-----."
+            exit 1
+          fi
+          echo "Chave de deploy: $(ssh-keygen -lf ~/.ssh/ec2)"
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          else
+            echo "::warning::Sem EC2_SSH_KNOWN_HOSTS: confiando na chave do servidor lida agora (ssh-keyscan)."
+            ssh-keyscan -T 15 -H "$EC2_HOST" > ~/.ssh/known_hosts
+          fi
+
+      - name: Atualizar e reconstruir o frontend
+        run: |
+          ssh -i ~/.ssh/ec2 "$EC2_USER@$EC2_HOST" "set -euo pipefail
+            echo '==> Código do Angular'
+            git -C $FRONTEND_PATH pull --ff-only
+            git -C $FRONTEND_PATH log --oneline -1
+            cd $DEPLOY_PATH/deploy
+            echo '==> Build do container frontend'
+            FRONTEND_DIR=$FRONTEND_PATH docker compose build frontend
+            echo '==> Subindo só o frontend'
+            FRONTEND_DIR=$FRONTEND_PATH docker compose up -d --no-build --no-deps frontend
+            docker image prune -f > /dev/null
+            docker compose ps frontend"
+
+      - name: Conferir a página
+        if: vars.DEPLOY_DOMAIN != ''
+        run: |
+          url="https://${{ vars.DEPLOY_DOMAIN }}/"
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 10 -o /dev/null "$url"; then
+              echo "OK: $url"
+              exit 0
+            fi
+            echo "Ainda subindo ($i/12)..."
+            sleep 5
+          done
+          echo "::error::$url não respondeu 200 depois do deploy. Veja: docker compose logs frontend"
+          exit 1
+
+      - name: Resumo
+        if: always()
+        run: |
+          {
+            echo "### Deploy do painel"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Servidor: \`$EC2_HOST\`"
+            echo "- Rollback: na EC2, \`git -C $FRONTEND_PATH checkout <commit>\` e rode o deploy de novo"
+          } >> "$GITHUB_STEP_SUMMARY"
