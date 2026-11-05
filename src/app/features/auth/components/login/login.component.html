@@ -1,7 +1,13 @@
 <div class="auth-page">
+  <button mat-icon-button type="button" class="auth-theme" (click)="theme.toggle()"
+          [attr.aria-label]="theme.theme() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'"
+          [title]="theme.theme() === 'dark' ? 'Modo claro' : 'Modo escuro'">
+    <mat-icon>{{ theme.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+  </button>
+
   <mat-card class="auth-card">
     <div class="auth-brand">
-      <div class="auth-brand-dot"></div>
+      <img src="assets/favicon.svg" alt="" aria-hidden="true">
       <span>Rotacerta</span>
     </div>
 
@@ -9,7 +15,7 @@
     <p class="auth-subtitle">Acesso exclusivo para gestores e gerentes.</p>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
-      <mat-form-field>
+      <mat-form-field appearance="outline">
         <mat-label>E-mail</mat-label>
         <input matInput type="email" formControlName="email" autocomplete="username" required>
         @if (form.controls.email.touched && form.controls.email.invalid) {
@@ -17,7 +23,7 @@
         }
       </mat-form-field>
 
-      <mat-form-field>
+      <mat-form-field appearance="outline">
         <mat-label>Senha</mat-label>
         <input matInput type="password" formControlName="password" autocomplete="current-password" required>
       </mat-form-field>
@@ -26,7 +32,7 @@
         <p class="auth-error" role="alert">{{ errorMessage }}</p>
       }
 
-      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || isSubmitting">
+      <button class="auth-submit" type="submit" [disabled]="form.invalid || isSubmitting">
         {{ isSubmitting ? 'Entrando...' : 'Entrar' }}
       </button>
     </form>
