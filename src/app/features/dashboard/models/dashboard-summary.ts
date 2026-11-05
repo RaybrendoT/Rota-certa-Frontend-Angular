@@ -39,3 +39,32 @@ export interface DashboardShift {
   seats: number;
   occupancy_rate: number | null;
 }
+
+/** Resposta de GET /api/dashboard/alerts/ (pendências que pedem ação do gestor). */
+export type DashboardAlertKind = 'incidents' | 'delays' | 'unassigned' | 'address_reviews';
+
+export interface DashboardAlertItem {
+  id?: number;
+  route_id?: number;
+  route_name?: string;
+  person_name?: string;
+  /** HH:MM no fuso da operação; em address_reviews, data/hora ISO do envio. */
+  time: string | null;
+  description?: string;
+  /** delays: 'reported' | 'overdue'; unassigned: 'no_vehicle' | 'no_driver'. */
+  reason?: string;
+}
+
+/** `items` traz todos os itens do grupo; o painel mostra os primeiros e expande o resto. */
+export interface DashboardAlertGroup {
+  kind: DashboardAlertKind;
+  count: number;
+  items: DashboardAlertItem[];
+}
+
+export interface DashboardAlerts {
+  date: string;
+  generated_at: string;
+  total: number;
+  groups: DashboardAlertGroup[];
+}

@@ -6,8 +6,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
-import { DashboardShift, DashboardSummary } from '../../models/dashboard-summary';
+import { DashboardAlerts, DashboardShift, DashboardSummary } from '../../models/dashboard-summary';
 import { DashboardService } from '../../service/dashboard.service';
+import { DashboardAlertsComponent } from '../dashboard-alerts/dashboard-alerts.component';
 
 /** Fuso da operação: o "hoje" do painel é o de Manaus, igual ao backend. */
 const OPERATION_TZ = 'America/Manaus';
@@ -21,7 +22,7 @@ function todayInOperation(): string {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
+  imports: [DashboardAlertsComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss',
 })
@@ -32,6 +33,8 @@ export class DashboardPageComponent implements OnInit {
 
   readonly date = signal(todayInOperation());
   readonly summary = signal<DashboardSummary | null>(null);
+  readonly alerts = signal<DashboardAlerts | null>(null);
+  readonly alertsError = signal(false);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -65,6 +68,14 @@ export class DashboardPageComponent implements OnInit {
 
   load(silent = false): void {
     if (!silent) this.loading.set(true);
+    // Alertas vêm à parte: se falharem, o resumo continua aparecendo.
+    this.service.alerts(this.date()).subscribe({
+      next: (data) => {
+        this.alerts.set(data);
+        this.alertsError.set(false);
+      },
+      error: () => this.alertsError.set(true),
+    });
     this.service.summary(this.date()).subscribe({
       next: (data) => {
         this.summary.set(data);
@@ -82,6 +93,7 @@ export class DashboardPageComponent implements OnInit {
     if (!value || value === this.date()) return;
     this.date.set(value);
     this.summary.set(null);
+    this.alerts.set(null);
     this.load();
   }
 

@@ -62,18 +62,10 @@
         <span class="muted">Rotas fixas aparecem nos dias do turno; rotas avulsas, na data em que foram planejadas.</span>
         <a mat-stroked-button routerLink="/planejamento"><mat-icon>auto_awesome</mat-icon>Planejar rotas</a>
       </div>
-    } @else {
-      @if (s.routes.without_vehicle > 0) {
-        <a class="alert warning" routerLink="/rotas">
-          <mat-icon>no_crash</mat-icon>
-          <span>
-            <strong>{{ s.routes.without_vehicle }} {{ s.routes.without_vehicle === 1 ? 'rota está' : 'rotas estão' }} sem veículo</strong>
-            — elas não saem sem motorista.
-          </span>
-          <mat-icon class="go">chevron_right</mat-icon>
-        </a>
+      @if (alerts(); as a) {
+        <app-dashboard-alerts [alerts]="a" />
       }
-
+    } @else {
       <div class="cards">
         <article class="card">
           <header><mat-icon>alt_route</mat-icon>Rotas do dia</header>
@@ -142,6 +134,12 @@
           }
         </article>
       </div>
+
+      @if (alerts(); as a) {
+        <app-dashboard-alerts [alerts]="a" />
+      } @else if (alertsError()) {
+        <p class="muted alerts-error">Não foi possível carregar as pendências. Elas voltam na próxima atualização.</p>
+      }
 
       <article class="page-card shifts">
         <h3>Por turno</h3>

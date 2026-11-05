@@ -59,8 +59,7 @@
 .updated { margin: -8px 0 0; font-size: 13px; }
 
 /* ---------- avisos ---------- */
-.error-banner,
-.alert {
+.error-banner {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -74,13 +73,8 @@
   span { flex: 1; }
 }
 
-.alert.warning {
-  background: var(--rc-warning-bg);
-  color: var(--rc-warning-text);
-  text-decoration: none;
-  span { flex: 1; }
-  &:hover { filter: brightness(1.05); }
-}
+
+.alerts-error { margin: 0; font-size: 13px; }
 
 /* ---------- cards ---------- */
 .cards {

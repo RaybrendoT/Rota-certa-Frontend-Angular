@@ -4,6 +4,13 @@
       <mat-icon>add</mat-icon>
       Novo Evento
     </button>
+    @if (typeFilter.length) {
+      <span class="type-filter">
+        <mat-icon>filter_alt</mat-icon>
+        Mostrando só: {{ typeFilterLabel }}
+        <button mat-button (click)="clearTypeFilter()">Ver todos os eventos</button>
+      </span>
+    }
   </div>
 
   <div class="table-wrapper">
