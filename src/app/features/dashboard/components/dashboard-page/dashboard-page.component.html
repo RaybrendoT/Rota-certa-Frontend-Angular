@@ -1,0 +1,192 @@
+<section class="dashboard">
+  <header class="dash-header">
+    <div class="hello">
+      <h2>{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h2>
+      <p class="muted">
+        Resumo de <strong>{{ dateLabel() }}</strong>
+        @if (!isToday()) { <span class="tag">outro dia</span> }
+      </p>
+    </div>
+
+    <div class="controls">
+      <button mat-icon-button (click)="shiftDay(-1)" matTooltip="Dia anterior" aria-label="Dia anterior">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <input
+        type="date"
+        class="date-input"
+        aria-label="Data do resumo"
+        [value]="date()"
+        (change)="changeDate($any($event.target).value)"
+      />
+      <button mat-icon-button (click)="shiftDay(1)" matTooltip="Próximo dia" aria-label="Próximo dia">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+      @if (!isToday()) {
+        <button mat-stroked-button (click)="goToday()">Hoje</button>
+      }
+      <button mat-stroked-button (click)="load()" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon>
+        Atualizar
+      </button>
+    </div>
+  </header>
+
+  @if (updatedAt(); as time) {
+    <p class="updated muted">
+      Atualizado às {{ time }}@if (isToday()) { · atualiza sozinho a cada minuto }
+    </p>
+  }
+
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+      <button mat-button (click)="load()">Tentar de novo</button>
+    </div>
+  }
+
+  @if (loading() && !summary()) {
+    <div class="cards">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="card skeleton" aria-hidden="true"></div>
+      }
+    </div>
+  }
+
+  @if (summary(); as s) {
+    @if (s.routes.total === 0) {
+      <div class="empty">
+        <mat-icon>event_busy</mat-icon>
+        <strong>Nenhuma rota prevista para este dia.</strong>
+        <span class="muted">Rotas fixas aparecem nos dias do turno; rotas avulsas, na data em que foram planejadas.</span>
+        <a mat-stroked-button routerLink="/planejamento"><mat-icon>auto_awesome</mat-icon>Planejar rotas</a>
+      </div>
+    } @else {
+      @if (s.routes.without_vehicle > 0) {
+        <a class="alert warning" routerLink="/rotas">
+          <mat-icon>no_crash</mat-icon>
+          <span>
+            <strong>{{ s.routes.without_vehicle }} {{ s.routes.without_vehicle === 1 ? 'rota está' : 'rotas estão' }} sem veículo</strong>
+            — elas não saem sem motorista.
+          </span>
+          <mat-icon class="go">chevron_right</mat-icon>
+        </a>
+      }
+
+      <div class="cards">
+        <article class="card">
+          <header><mat-icon>alt_route</mat-icon>Rotas do dia</header>
+          <div class="value">{{ s.routes.total }}</div>
+          <div class="stack-bar" aria-hidden="true">
+            <span class="seg done" [style.width.%]="share(s.routes.finished, s.routes.total)"></span>
+            <span class="seg running" [style.width.%]="share(s.routes.in_progress, s.routes.total)"></span>
+          </div>
+          <ul class="legend">
+            <li><i class="dot running"></i>{{ s.routes.in_progress }} em andamento</li>
+            <li><i class="dot done"></i>{{ count(s.routes.finished, 'finalizada') }}</li>
+            <li><i class="dot idle"></i>{{ count(s.routes.not_started, 'não iniciada') }}</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <header><mat-icon>groups</mat-icon>Passageiros previstos</header>
+          <div class="value">{{ s.passengers.expected }}</div>
+          <div class="stack-bar" aria-hidden="true">
+            <span class="seg done" [style.width.%]="share(s.passengers.confirmed, s.passengers.expected)"></span>
+            <span class="seg bad" [style.width.%]="share(s.passengers.absent, s.passengers.expected)"></span>
+          </div>
+          <ul class="legend">
+            <li><i class="dot done"></i>{{ count(s.passengers.confirmed, 'embarque confirmado', 'embarques confirmados') }}</li>
+            <li><i class="dot bad"></i>{{ count(s.passengers.absent, 'ausência') }}</li>
+            <li><i class="dot idle"></i>{{ count(s.passengers.pending, 'pendente') }}</li>
+          </ul>
+        </article>
+
+        <article class="card" [class.attention]="s.passengers.absent > 0">
+          <header><mat-icon>person_off</mat-icon>Ausências</header>
+          <div class="value">{{ s.passengers.absent }}</div>
+          <p class="sub muted">
+            {{ percent(s.passengers.expected ? s.passengers.absent / s.passengers.expected : null) }} dos passageiros previstos
+          </p>
+        </article>
+
+        <a class="card link" routerLink="/eventos-rota" [class.attention]="s.events.delays + s.events.incidents > 0">
+          <header><mat-icon>report</mat-icon>Ocorrências</header>
+          <div class="value">{{ s.events.delays + s.events.incidents }}</div>
+          <ul class="legend">
+            <li><i class="dot warn"></i>{{ count(s.events.delays, 'atraso') }}</li>
+            <li><i class="dot bad"></i>{{ count(s.events.incidents, 'incidente') }}</li>
+          </ul>
+        </a>
+
+        <article class="card">
+          <header><mat-icon>airline_seat_recline_normal</mat-icon>Ocupação dos veículos</header>
+          <div class="value">{{ percent(s.occupancy.rate) }}</div>
+          <div class="meter" aria-hidden="true">
+            <span [class]="'fill ' + occupancyLevel(s.occupancy.rate)" [style.width.%]="share(s.occupancy.passengers, s.occupancy.seats)"></span>
+          </div>
+          <p class="sub muted">{{ count(s.occupancy.passengers, 'passageiro') }} em {{ count(s.occupancy.seats, 'lugar', 'lugares') }}</p>
+        </article>
+
+        <article class="card">
+          <header><mat-icon>schedule</mat-icon>Pontualidade</header>
+          <div class="value">{{ percent(s.punctuality.rate) }}</div>
+          @if (s.punctuality.finished) {
+            <p class="sub muted">
+              {{ s.punctuality.on_time }} de {{ count(s.punctuality.finished, 'rota finalizada', 'rotas finalizadas') }} chegou no horário
+              (tolerância de {{ s.punctuality.tolerance_minutes }} min)
+            </p>
+          } @else {
+            <p class="sub muted">Aparece quando as rotas do dia forem finalizadas.</p>
+          }
+        </article>
+      </div>
+
+      <article class="page-card shifts">
+        <h3>Por turno</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Turno</th>
+                <th class="num">Rotas</th>
+                <th class="num">Em andamento</th>
+                <th class="num">Finalizadas</th>
+                <th class="num">Passageiros</th>
+                <th class="num">Confirmados</th>
+                <th class="num">Ausentes</th>
+                <th>Ocupação</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (shift of s.shifts; track shift.schedule_id) {
+                <tr>
+                  <td><strong>{{ shiftLabel(shift) }}</strong></td>
+                  <td class="num">{{ shift.routes }}</td>
+                  <td class="num">{{ shift.in_progress }}</td>
+                  <td class="num">{{ shift.finished }}</td>
+                  <td class="num">{{ shift.passengers }}</td>
+                  <td class="num">{{ shift.confirmed }}</td>
+                  <td class="num">{{ shift.absent }}</td>
+                  <td>
+                    <div class="occ">
+                      <div class="meter small" aria-hidden="true">
+                        <span [class]="'fill ' + occupancyLevel(shift.occupancy_rate)" [style.width.%]="share(shift.passengers, shift.seats)"></span>
+                      </div>
+                      <span>{{ percent(shift.occupancy_rate) }}</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="footnote muted">
+          Embarques e ausências contam quando o motorista ou o colaborador registra no dia.
+          O status da rota sai dos eventos de partida e chegada enviados pelo app do motorista.
+        </p>
+      </article>
+    }
+  }
+</section>

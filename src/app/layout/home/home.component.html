@@ -1,13 +1,16 @@
-<div class="home-container">
-  <img
-    src="assets/images/bem-vindo.png"
-    alt="Bem-vindo ao RotaCerta"
-    class="home-image"
-  >
+@if (isManager()) {
+  <app-dashboard-page />
+} @else {
+  <div class="home-container">
+    <img
+      src="assets/images/bem-vindo.png"
+      alt="Bem-vindo ao RotaCerta"
+      class="home-image"
+    >
 
-  <div class="maintenance-text">
-    <h2>{{ title }}</h2>
-    <p>{{ description }}</p>
+    <div class="maintenance-text">
+      <h2>{{ title }}</h2>
+      <p>{{ description }}</p>
+    </div>
   </div>
-
-</div>
+}

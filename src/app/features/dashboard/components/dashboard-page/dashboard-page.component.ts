@@ -1,0 +1,122 @@
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../../core/services/auth.service';
+import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
+import { DashboardShift, DashboardSummary } from '../../models/dashboard-summary';
+import { DashboardService } from '../../service/dashboard.service';
+
+/** Fuso da operação: o "hoje" do painel é o de Manaus, igual ao backend. */
+const OPERATION_TZ = 'America/Manaus';
+const AUTO_REFRESH_MS = 60_000;
+
+function todayInOperation(): string {
+  // en-CA formata como AAAA-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: OPERATION_TZ }).format(new Date());
+}
+
+@Component({
+  selector: 'app-dashboard-page',
+  standalone: true,
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
+  templateUrl: './dashboard-page.component.html',
+  styleUrl: './dashboard-page.component.scss',
+})
+export class DashboardPageComponent implements OnInit {
+  private readonly service = inject(DashboardService);
+  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly date = signal(todayInOperation());
+  readonly summary = signal<DashboardSummary | null>(null);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+
+  readonly isToday = computed(() => this.date() === todayInOperation());
+  readonly firstName = computed(() => (this.auth.person()?.name ?? '').split(' ')[0]);
+  readonly greeting = computed(() => {
+    const hour = Number(
+      new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCycle: 'h23', timeZone: OPERATION_TZ }).format(new Date()),
+    );
+    return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  });
+  readonly dateLabel = computed(() =>
+    new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+      new Date(`${this.date()}T00:00:00Z`),
+    ),
+  );
+  readonly updatedAt = computed(() => {
+    const generated = this.summary()?.generated_at;
+    return generated
+      ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: OPERATION_TZ }).format(new Date(generated))
+      : null;
+  });
+
+  ngOnInit(): void {
+    this.load();
+    const timer = setInterval(() => {
+      if (this.isToday() && !this.loading()) this.load(true);
+    }, AUTO_REFRESH_MS);
+    this.destroyRef.onDestroy(() => clearInterval(timer));
+  }
+
+  load(silent = false): void {
+    if (!silent) this.loading.set(true);
+    this.service.summary(this.date()).subscribe({
+      next: (data) => {
+        this.summary.set(data);
+        this.error.set(null);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(extractErrorMessage(err, 'Não foi possível carregar o resumo do dia.'));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  changeDate(value: string): void {
+    if (!value || value === this.date()) return;
+    this.date.set(value);
+    this.summary.set(null);
+    this.load();
+  }
+
+  shiftDay(days: number): void {
+    const next = new Date(`${this.date()}T12:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + days);
+    this.changeDate(next.toISOString().slice(0, 10));
+  }
+
+  goToday(): void {
+    this.changeDate(todayInOperation());
+  }
+
+  percent(rate: number | null | undefined): string {
+    if (rate == null) return '—';
+    const value = rate * 100;
+    // Abaixo de 1% mostra uma casa decimal, para 1 ausência em 1.000 não virar "0%".
+    return value > 0 && value < 1 ? `${value.toFixed(1).replace('.', ',')}%` : `${Math.round(value)}%`;
+  }
+
+  /** "1 rota" / "2 rotas"; `plural` só quando não é só acrescentar "s". */
+  count(n: number, singular: string, plural = `${singular}s`): string {
+    return `${n} ${n === 1 ? singular : plural}`;
+  }
+
+  share(part: number, whole: number): number {
+    return whole ? Math.min(100, (part / whole) * 100) : 0;
+  }
+
+  occupancyLevel(rate: number | null): 'low' | 'ok' | 'high' {
+    if (rate == null || rate < 0.5) return 'low';
+    return rate > 0.95 ? 'high' : 'ok';
+  }
+
+  shiftLabel(shift: DashboardShift): string {
+    return shift.time ?? 'Avulsas';
+  }
+}
