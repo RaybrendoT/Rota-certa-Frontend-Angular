@@ -8,10 +8,12 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ThemeService } from '../../../../core/services/theme.service';
 import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -26,6 +28,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   imports: [
     ReactiveFormsModule,
     MatButtonModule,
+    MatIconModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule
@@ -37,6 +40,7 @@ export class ChangePasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  readonly theme = inject(ThemeService);
 
   readonly form = this.fb.nonNullable.group(
     {
