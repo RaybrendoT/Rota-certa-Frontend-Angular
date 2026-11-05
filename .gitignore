@@ -40,3 +40,6 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Configuração local com chaves (ex.: googleMapsApiKey); ver assets/config/config.local.example.json
+/src/assets/config/config.local.json
