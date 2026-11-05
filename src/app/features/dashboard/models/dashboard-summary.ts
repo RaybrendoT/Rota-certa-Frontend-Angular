@@ -68,3 +68,22 @@ export interface DashboardAlerts {
   total: number;
   groups: DashboardAlertGroup[];
 }
+
+/** Item do feed: mesmo formato das mensagens route_event e boarding_status do WebSocket. */
+export interface DashboardFeedItem {
+  type: 'route_event' | 'boarding_status';
+  id?: number;
+  route_passenger_id?: number;
+  route_id: number;
+  route_name?: string;
+  event_type?: 'departure' | 'arrival' | 'stop' | 'delay' | 'incident';
+  description?: string;
+  person_name?: string;
+  status?: 'pending' | 'confirmed' | 'absent';
+  timestamp?: string;
+}
+
+export interface DashboardFeed {
+  date: string;
+  items: DashboardFeedItem[];
+}

@@ -141,6 +141,8 @@
         <p class="muted alerts-error">Não foi possível carregar as pendências. Elas voltam na próxima atualização.</p>
       }
 
+      <app-dashboard-feed [date]="date()" [live]="isToday()" (activity)="onLiveActivity()" />
+
       <article class="page-card shifts">
         <h3>Por turno</h3>
         <div class="table-wrap">

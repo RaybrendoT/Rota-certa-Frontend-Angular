@@ -9,10 +9,13 @@ import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
 import { DashboardAlerts, DashboardShift, DashboardSummary } from '../../models/dashboard-summary';
 import { DashboardService } from '../../service/dashboard.service';
 import { DashboardAlertsComponent } from '../dashboard-alerts/dashboard-alerts.component';
+import { DashboardFeedComponent } from '../dashboard-feed/dashboard-feed.component';
 
 /** Fuso da operação: o "hoje" do painel é o de Manaus, igual ao backend. */
 const OPERATION_TZ = 'America/Manaus';
 const AUTO_REFRESH_MS = 60_000;
+/** Espera depois de um evento ao vivo antes de recarregar os números (agrupa rajadas). */
+const LIVE_REFRESH_DELAY_MS = 3_000;
 
 function todayInOperation(): string {
   // en-CA formata como AAAA-MM-DD.
@@ -22,7 +25,7 @@ function todayInOperation(): string {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [DashboardAlertsComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
+  imports: [DashboardAlertsComponent, DashboardFeedComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, RouterLink],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss',
 })
@@ -63,7 +66,10 @@ export class DashboardPageComponent implements OnInit {
     const timer = setInterval(() => {
       if (this.isToday() && !this.loading()) this.load(true);
     }, AUTO_REFRESH_MS);
-    this.destroyRef.onDestroy(() => clearInterval(timer));
+    this.destroyRef.onDestroy(() => {
+      clearInterval(timer);
+      if (this.liveRefresh) clearTimeout(this.liveRefresh);
+    });
   }
 
   load(silent = false): void {
@@ -87,6 +93,17 @@ export class DashboardPageComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  private liveRefresh: ReturnType<typeof setTimeout> | null = null;
+
+  /** Evento novo pelo WebSocket: atualiza resumo e alertas sem esperar o próximo minuto. */
+  onLiveActivity(): void {
+    if (this.liveRefresh) return;
+    this.liveRefresh = setTimeout(() => {
+      this.liveRefresh = null;
+      this.load(true);
+    }, LIVE_REFRESH_DELAY_MS);
   }
 
   changeDate(value: string): void {

@@ -25,6 +25,17 @@ export class ConfigService {
     return this.config?.apiBaseUrl || '';
   }
 
+  /**
+   * WebSocket do mesmo servidor da API: "http://host:8000/api" -> "ws://host:8000/ws/stream/";
+   * com apiBaseUrl relativa ("/api", atrás do Caddy) usa a origem da página (wss em https).
+   */
+  getStreamUrl(): string {
+    const base = new URL(this.getApiBaseUrl().replace(/\/api\/?$/, '') || '/', location.href);
+    base.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+    base.pathname = `${base.pathname.replace(/\/$/, '')}/ws/stream/`;
+    return base.toString();
+  }
+
   /** Django admin no mesmo servidor da API: ".../api" -> ".../admin/". */
   getAdminUrl(): string {
     return `${this.getApiBaseUrl().replace(/\/api\/?$/, '')}/admin/`;
