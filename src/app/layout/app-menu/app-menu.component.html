@@ -141,12 +141,6 @@
         <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Início</a>
       </nav>
 
-      <button mat-icon-button class="topbar-theme" (click)="theme.toggle()"
-              [matTooltip]="theme.theme() === 'dark' ? 'Modo claro' : 'Modo escuro'"
-              [attr.aria-label]="theme.theme() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'">
-        <mat-icon>{{ theme.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
-      </button>
-
       <div class="topbar-user">
         <div class="user-text">
           <div class="user-name">{{ userName() }}</div>
