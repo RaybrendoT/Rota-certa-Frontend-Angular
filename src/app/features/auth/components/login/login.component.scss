@@ -1,56 +1,138 @@
+// Login e troca de senha (change-password usa este mesmo arquivo).
+// Cores vêm das variáveis --rc-* (src/styles.scss) para funcionar no modo claro e no escuro.
+
+:host {
+  --auth-accent: #1e40af;
+  --auth-accent-hover: #1d4ed8;
+  --auth-accent-text: #ffffff;
+  --auth-glow: rgba(37, 99, 235, 0.18);
+  display: block;
+}
+
+:host-context(html[data-theme='dark']) {
+  --auth-accent: #3b82f6;
+  --auth-accent-hover: #60a5fa;
+  --auth-accent-text: #0b1220;
+  --auth-glow: rgba(59, 130, 246, 0.22);
+}
+
 .auth-page {
   align-items: center;
-  background-color: #0f172a;
+  background:
+    radial-gradient(circle at 15% 10%, var(--auth-glow), transparent 45%),
+    radial-gradient(circle at 85% 90%, var(--auth-glow), transparent 40%),
+    var(--rc-bg);
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   min-height: 100vh;
-  padding: 24px;
+  padding: 24px 16px;
+  position: relative;
+}
+
+.auth-theme {
+  color: var(--rc-text-muted);
+  position: absolute;
+  right: 12px;
+  top: 12px;
 }
 
 .auth-card {
-  background: #ffffff;
-  max-width: 400px;
-  padding: 32px;
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-border);
+  border-radius: 16px;
+  box-shadow: var(--rc-shadow);
+  box-sizing: border-box;
+  color: var(--rc-text);
+  max-width: 420px;
+  padding: 36px 32px 28px;
   width: 100%;
 }
 
 .auth-brand {
   align-items: center;
-  color: #1e40af;
+  color: var(--rc-text);
   display: flex;
   font-size: 1.25rem;
-  font-weight: 600;
-  gap: 8px;
-  margin-bottom: 24px;
-}
+  font-weight: 700;
+  gap: 10px;
+  letter-spacing: -0.01em;
+  margin-bottom: 28px;
 
-.auth-brand-dot {
-  background-color: #3b82f6;
-  border-radius: 50%;
-  height: 10px;
-  width: 10px;
+  img {
+    height: 36px;
+    width: 36px;
+  }
 }
 
 h2 {
-  color: #111827;
-  font-size: 24px;
+  color: var(--rc-text);
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 4px;
 }
 
 .auth-subtitle {
-  color: #6b7280;
+  color: var(--rc-text-muted);
   margin: 0 0 24px;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+
+  mat-form-field {
+    width: 100%;
+  }
 }
 
 .auth-error {
-  color: #c62828;
+  background: var(--rc-danger-bg);
+  border-radius: 8px;
+  color: var(--rc-danger-text);
+  font-size: 0.875rem;
   margin: 0 0 8px;
+  padding: 10px 12px;
+}
+
+// Botão próprio (não mat-raised-button): o disabled do Material some no fundo do cartão.
+.auth-submit {
+  background: var(--auth-accent);
+  border: 0;
+  border-radius: 10px;
+  color: var(--auth-accent-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  height: 48px;
+  margin-top: 8px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  width: 100%;
+
+  &:hover:not(:disabled) {
+    background: var(--auth-accent-hover);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--auth-glow);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.auth-secondary {
+  align-self: center;
+  margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 20px 20px;
+  }
 }

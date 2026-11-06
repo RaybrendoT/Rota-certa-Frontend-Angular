@@ -1,0 +1,138 @@
+# CI/CD do painel (Angular): build → deploy na EC2.
+#
+# - Pull request: npm ci e build de produção.
+# - Push na main: o mesmo e, por SSH na EC2, atualiza o clone do Angular e reconstrói só o
+#   container "frontend" da stack de produção (deploy/docker-compose.yml do backend, com Caddy).
+# - Actions → CI/CD → Run workflow: o mesmo da main, com a opção de pular o deploy.
+#
+# Mesma configuração do backend (Settings → Secrets and variables → Actions):
+#   Variables: EC2_HOST (obrigatória p/ o deploy), EC2_USER (padrão ubuntu), DEPLOY_DOMAIN (confere a página
+#              no fim), DEPLOY_PATH (padrão ~/rotacerta/rota-certa-backend-django),
+#              FRONTEND_PATH (padrão ~/rotacerta/rota-certa-frontend-angular)
+#   Secrets:   EC2_SSH_KEY (chave privada .pem), EC2_SSH_KNOWN_HOSTS (opcional, saída do ssh-keyscan)
+# Sem EC2_HOST o pipeline para depois do build.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Fazer o deploy na EC2 depois do build
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  # Em PR, um push novo cancela a execução antiga. Na main, nunca cancela um deploy no meio.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Dependências
+        run: npm ci
+
+      - name: Build de produção
+        run: npx ng build --configuration production
+
+  deploy:
+    name: Deploy na EC2
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name != 'pull_request'
+      && vars.EC2_HOST != ''
+      && (github.event_name == 'push' || inputs.deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_DOMAIN && format('https://{0}/', vars.DEPLOY_DOMAIN) || '' }}
+    concurrency:
+      # O mesmo grupo do deploy do backend: os dois nunca mexem na stack ao mesmo tempo.
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      EC2_HOST: ${{ vars.EC2_HOST }}
+      EC2_USER: ${{ vars.EC2_USER || 'ubuntu' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '~/rotacerta/rota-certa-backend-django' }}
+      FRONTEND_PATH: ${{ vars.FRONTEND_PATH || '~/rotacerta/rota-certa-frontend-angular' }}
+    steps:
+      - name: Chave SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_SSH_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::Falta o secret EC2_SSH_KEY (chave privada da EC2)."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # tr -d '\r': chave copiada no Windows chega com CRLF e o OpenSSH recusa ("error in libcrypto").
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/ec2 && chmod 600 ~/.ssh/ec2
+          if ! ssh-keygen -y -f ~/.ssh/ec2 > /dev/null 2>&1; then
+            echo "::error::EC2_SSH_KEY não é uma chave privada válida. Cole o arquivo inteiro SEM .pub, das linhas -----BEGIN ... até -----END ... PRIVATE KEY-----."
+            exit 1
+          fi
+          echo "Chave de deploy: $(ssh-keygen -lf ~/.ssh/ec2)"
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          else
+            echo "::warning::Sem EC2_SSH_KNOWN_HOSTS: confiando na chave do servidor lida agora (ssh-keyscan)."
+            ssh-keyscan -T 15 -H "$EC2_HOST" > ~/.ssh/known_hosts
+          fi
+
+      - name: Atualizar e reconstruir o frontend
+        run: |
+          ssh -i ~/.ssh/ec2 "$EC2_USER@$EC2_HOST" "set -euo pipefail
+            echo '==> Código do Angular'
+            git -C $FRONTEND_PATH pull --ff-only
+            git -C $FRONTEND_PATH log --oneline -1
+            cd $DEPLOY_PATH/deploy
+            echo '==> Build do container frontend'
+            FRONTEND_DIR=$FRONTEND_PATH docker compose build frontend
+            echo '==> Subindo só o frontend'
+            FRONTEND_DIR=$FRONTEND_PATH docker compose up -d --no-build --no-deps frontend
+            docker image prune -f > /dev/null
+            docker compose ps frontend"
+
+      - name: Conferir a página
+        if: vars.DEPLOY_DOMAIN != ''
+        run: |
+          url="https://${{ vars.DEPLOY_DOMAIN }}/"
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 10 -o /dev/null "$url"; then
+              echo "OK: $url"
+              exit 0
+            fi
+            echo "Ainda subindo ($i/12)..."
+            sleep 5
+          done
+          echo "::error::$url não respondeu 200 depois do deploy. Veja: docker compose logs frontend"
+          exit 1
+
+      - name: Resumo
+        if: always()
+        run: |
+          {
+            echo "### Deploy do painel"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Servidor: \`$EC2_HOST\`"
+            echo "- Rollback: na EC2, \`git -C $FRONTEND_PATH checkout <commit>\` e rode o deploy de novo"
+          } >> "$GITHUB_STEP_SUMMARY"
