@@ -116,6 +116,21 @@ export class AuthService {
     );
   }
 
+  /** Troca a foto do perfil (imagem já recortada e reduzida no navegador). */
+  uploadPhoto(image: Blob): Observable<SessionPerson> {
+    const body = new FormData();
+    body.append('photo', image, 'foto.jpg');
+    return this.http
+      .put<{ person: SessionPerson }>(`${this.config.getApiBaseUrl()}/me/photo/`, body)
+      .pipe(map(response => response.person), tap(person => this.updateSession({ person })));
+  }
+
+  removePhoto(): Observable<SessionPerson> {
+    return this.http
+      .delete<{ person: SessionPerson }>(`${this.config.getApiBaseUrl()}/me/photo/`)
+      .pipe(map(response => response.person), tap(person => this.updateSession({ person })));
+  }
+
   clearSession(): void {
     this.profileVerified = false;
     this.state.set(null);
