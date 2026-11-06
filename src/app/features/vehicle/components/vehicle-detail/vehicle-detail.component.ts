@@ -80,7 +80,7 @@ export class VehicleDetailComponent implements OnInit {
   }
 
   loadDrivers(): void {
-    this.employeeService.getAll().subscribe({
+    this.employeeService.getAll({ type: 'DRIVER', page_size: 500 }).subscribe({
       next: (response) => {
         this.driverList = this.getPeopleFromResponse(response)
           .filter(person => person.type === 'DRIVER');

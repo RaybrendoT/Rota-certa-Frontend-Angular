@@ -75,7 +75,7 @@ export class RouteDetailComponent implements OnInit {
   }
 
   loadVehicles(): void {
-    this.vehicleService.getAll().subscribe({
+    this.vehicleService.getAll({ page_size: 500 }).subscribe({
       next: (response) => {
         this.vehicleList = this.getVehiclesFromResponse(response);
       },

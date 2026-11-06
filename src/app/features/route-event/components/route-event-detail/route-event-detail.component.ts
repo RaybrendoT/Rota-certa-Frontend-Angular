@@ -59,7 +59,7 @@ export class RouteEventDetailComponent implements OnInit {
   }
 
   loadRoutes(): void {
-    this.routeService.getAll().subscribe({
+    this.routeService.getAll({ page_size: 500 }).subscribe({
       next: (response) => {
         this.routeList = this.getRoutesFromResponse(response);
       },
