@@ -141,21 +141,62 @@
         <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Início</a>
       </nav>
 
-      <button mat-icon-button class="topbar-theme" (click)="theme.toggle()"
-              [matTooltip]="theme.theme() === 'dark' ? 'Modo claro' : 'Modo escuro'"
-              [attr.aria-label]="theme.theme() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'">
-        <mat-icon>{{ theme.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
-      </button>
-
       <div class="topbar-user">
         <div class="user-text">
           <div class="user-name">{{ userName() }}</div>
           <div class="user-role">{{ userRole() }}</div>
         </div>
-        <div class="avatar" aria-hidden="true">{{ userInitials() }}</div>
-        <button mat-icon-button class="logout-button" (click)="auth.logout()" aria-label="Sair" matTooltip="Sair">
-          <mat-icon>logout</mat-icon>
-        </button>
+        <div class="user-menu" [class.open]="profileOpen()">
+          <button type="button" class="avatar-button" (click)="toggleProfile()"
+                  [attr.aria-expanded]="profileOpen()" aria-haspopup="menu" aria-label="Opções do perfil">
+            @if (userPhoto(); as photo) {
+              <img class="avatar" [src]="photo" alt="" />
+            } @else {
+              <span class="avatar">{{ userInitials() }}</span>
+            }
+            <mat-icon class="caret">expand_more</mat-icon>
+          </button>
+
+          <div class="profile-panel" role="menu" aria-label="Perfil">
+            <div class="profile-head">
+              <button type="button" class="photo-edit" (click)="photoInput.click()" [disabled]="photoBusy()"
+                      [attr.aria-label]="userPhoto() ? 'Trocar foto' : 'Adicionar foto'">
+                @if (userPhoto(); as photo) {
+                  <img class="avatar large" [src]="photo" alt="Foto do perfil" />
+                } @else {
+                  <span class="avatar large">{{ userInitials() }}</span>
+                }
+                <span class="photo-overlay"><mat-icon>{{ photoBusy() ? 'hourglass_top' : 'photo_camera' }}</mat-icon></span>
+              </button>
+              <div class="profile-text">
+                <strong>{{ userName() }}</strong>
+                <span>{{ userEmail() }}</span>
+                <span class="muted">{{ userRole() }}</span>
+              </div>
+            </div>
+
+            <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhotoSelected($event)" />
+            <button type="button" role="menuitem" (click)="photoInput.click()" [disabled]="photoBusy()">
+              <mat-icon>photo_camera</mat-icon>{{ userPhoto() ? 'Trocar foto' : 'Adicionar foto' }}
+            </button>
+            @if (userPhoto()) {
+              <button type="button" role="menuitem" (click)="removePhoto()" [disabled]="photoBusy()">
+                <mat-icon>hide_image</mat-icon>Remover foto
+              </button>
+            }
+            <a role="menuitem" routerLink="/alterar-senha" (click)="profileOpen.set(false)">
+              <mat-icon>lock_reset</mat-icon>Alterar senha
+            </a>
+            <button type="button" role="menuitem" (click)="theme.toggle()">
+              <mat-icon>{{ theme.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+              {{ theme.theme() === 'dark' ? 'Modo claro' : 'Modo escuro' }}
+            </button>
+            <hr />
+            <button type="button" role="menuitem" class="danger" (click)="auth.logout()">
+              <mat-icon>logout</mat-icon>Sair
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 

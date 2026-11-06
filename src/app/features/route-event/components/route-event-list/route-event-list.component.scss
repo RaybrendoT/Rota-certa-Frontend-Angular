@@ -1,0 +1,12 @@
+.type-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 12px;
+  border-radius: 999px;
+  background: var(--rc-info-bg);
+  color: var(--rc-info-text);
+  font-size: 13px;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}

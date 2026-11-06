@@ -1,0 +1,187 @@
+<section class="trends" aria-labelledby="trends-title">
+  <header>
+    <div>
+      <h3 id="trends-title">Últimos {{ range() }} dias</h3>
+      @if (data(); as d) {
+        <p class="muted">{{ dayLabel(d.from) }} a {{ dayLabel(d.to) }} · todos os turnos</p>
+      }
+    </div>
+    <div class="controls">
+      <div class="segmented" role="radiogroup" aria-label="Período">
+        @for (r of ranges; track r) {
+          <button type="button" role="radio" [attr.aria-checked]="range() === r" [class.active]="range() === r" (click)="setRange(r)">
+            {{ r }} dias
+          </button>
+        }
+      </div>
+      <button mat-stroked-button (click)="showTable.set(!showTable())" [attr.aria-pressed]="showTable()">
+        <mat-icon>{{ showTable() ? 'bar_chart' : 'table_rows' }}</mat-icon>
+        {{ showTable() ? 'Ver gráficos' : 'Ver tabela' }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="muted" role="alert">{{ error() }} <button mat-button (click)="load()">Tentar de novo</button></p>
+  } @else if (loading() && !data()) {
+    <div class="skeleton" aria-hidden="true"></div>
+  } @else if (data()) {
+    <dl class="kpis">
+      <div><dt>Embarques</dt><dd>{{ format(totals().confirmed) }}</dd></div>
+      <div><dt>Ausências</dt><dd>{{ format(totals().absent) }} <small>{{ percent(totals().absentRate) }} dos previstos</small></dd></div>
+      <div><dt>Pontualidade</dt><dd>{{ percent(totals().punctuality) }}</dd></div>
+      <div><dt>Ocorrências</dt><dd>{{ totals().delays + totals().incidents }} <small>{{ totals().delays }} atrasos · {{ totals().incidents }} incidentes</small></dd></div>
+    </dl>
+
+    @if (showTable()) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dia</th><th class="num">Rotas</th><th class="num">Previstos</th><th class="num">Embarques</th>
+              <th class="num">Ausências</th><th class="num">Sem registro</th><th class="num">Pontualidade</th>
+              <th class="num">Atrasos</th><th class="num">Incidentes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of days(); track d.date) {
+              <tr>
+                <td>{{ dayLabel(d.date, true) }}</td>
+                <td class="num">{{ d.routes }}</td>
+                <td class="num">{{ format(d.expected) }}</td>
+                <td class="num">{{ format(d.confirmed) }}</td>
+                <td class="num">{{ format(d.absent) }}</td>
+                <td class="num">{{ format(d.pending) }}</td>
+                <td class="num">{{ percent(d.punctuality_rate) }}</td>
+                <td class="num">{{ d.delays }}</td>
+                <td class="num">{{ d.incidents }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="charts">
+        <!-- Embarques × ausências: colunas empilhadas sobre o total de passageiros previstos -->
+        <figure class="chart wide">
+          <figcaption>
+            <strong>Embarques e ausências por dia</strong>
+            <ul class="legend">
+              <li><i class="swatch s1"></i>Embarques</li>
+              <li><i class="swatch s2"></i>Ausências</li>
+              <li><i class="swatch neutral"></i>Sem registro</li>
+            </ul>
+          </figcaption>
+          @if (!hasBoardingData()) {
+            <p class="empty muted">Ainda não há embarques registrados no período. Eles aparecem conforme motoristas e colaboradores marcam no app.</p>
+          }
+          <div class="plot columns" (mouseleave)="hover('boarding', null)">
+            <div class="grid" aria-hidden="true">
+              @for (t of boardingTicks(); track t) {
+                <span [style.bottom.%]="pct(t, boardingMax())"><em>{{ format(t) }}</em></span>
+              }
+            </div>
+            <div class="bars">
+              @for (d of days(); track d.date; let i = $index) {
+                <button type="button" class="col" (mouseenter)="hover('boarding', i)" (focus)="hover('boarding', i)" (blur)="hover('boarding', null)"
+                  [attr.aria-label]="dayLabel(d.date, true) + ': ' + d.confirmed + ' embarques, ' + d.absent + ' ausências, ' + d.pending + ' sem registro'">
+                  <span class="stack" [style.height.%]="pct(d.expected, boardingMax())">
+                    @if (d.pending) { <span class="seg neutral" [style.flex-grow]="d.pending"></span> }
+                    @if (d.absent) { <span class="seg s2" [style.flex-grow]="d.absent"></span> }
+                    @if (d.confirmed) { <span class="seg s1" [style.flex-grow]="d.confirmed"></span> }
+                  </span>
+                </button>
+              }
+            </div>
+            @if (boardingHover(); as h) {
+              @if (days()[h.index]; as d) {
+                <div class="tooltip" [style.left.%]="h.left" role="status">
+                  <strong>{{ dayLabel(d.date, true) }}</strong>
+                  @if (d.routes) {
+                    <span><i class="swatch s1"></i>{{ format(d.confirmed) }} embarques</span>
+                    <span><i class="swatch s2"></i>{{ format(d.absent) }} ausências · {{ percent(d.expected ? d.absent / d.expected : null) }}</span>
+                    <span><i class="swatch neutral"></i>{{ format(d.pending) }} sem registro</span>
+                  } @else {
+                    <span class="muted">Sem rotas neste dia</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+          <div class="axis" aria-hidden="true">
+            @for (d of days(); track d.date; let i = $index) {
+              <span>{{ showTick(i) ? dayLabel(d.date) : '' }}</span>
+            }
+          </div>
+        </figure>
+
+        <!-- Pontualidade: uma série, % de rotas finalizadas no horário -->
+        <figure class="chart">
+          <figcaption><strong>Pontualidade</strong><span class="muted">rotas finalizadas no horário (tolerância de 10 min)</span></figcaption>
+          @if (!hasPunctuality()) {
+            <p class="empty muted">Aparece quando houver rotas finalizadas no período.</p>
+          }
+          <div class="plot line" (mouseleave)="hover('punctuality', null)">
+            <div class="grid" aria-hidden="true">
+              <span [style.bottom.%]="0"><em>0%</em></span>
+              <span [style.bottom.%]="50"><em>50%</em></span>
+              <span [style.bottom.%]="100"><em>100%</em></span>
+            </div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              @for (path of punctualityPaths(); track $index) {
+                <path [attr.d]="path" />
+              }
+            </svg>
+            @for (d of days(); track d.date; let i = $index) {
+              @if (d.punctuality_rate != null) {
+                <span class="dot" [style.left.%]="x(i)" [style.bottom.%]="d.punctuality_rate * 100"
+                  [class.active]="punctualityHover()?.index === i" aria-hidden="true"></span>
+              }
+              <button type="button" class="hit" [style.left.%]="x(i)" [style.width.%]="100 / days().length"
+                (mouseenter)="hover('punctuality', i)" (focus)="hover('punctuality', i)" (blur)="hover('punctuality', null)"
+                [attr.aria-label]="dayLabel(d.date, true) + ': pontualidade ' + percent(d.punctuality_rate)"></button>
+            }
+            @if (punctualityHover(); as h) {
+              @if (days()[h.index]; as d) {
+                <div class="tooltip" [style.left.%]="h.left" role="status">
+                  <strong>{{ dayLabel(d.date, true) }}</strong>
+                  @if (d.on_time + d.late) {
+                    <span>{{ percent(d.punctuality_rate) }} no horário</span>
+                    <span class="muted">{{ d.on_time }} de {{ d.on_time + d.late }} rotas finalizadas</span>
+                  } @else {
+                    <span class="muted">Nenhuma rota finalizada</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+          <div class="axis" aria-hidden="true">
+            @for (d of days(); track d.date; let i = $index) {
+              <span>{{ showTick(i) ? dayLabel(d.date) : '' }}</span>
+            }
+          </div>
+        </figure>
+
+        <!-- Ranking: rotas com maior taxa de ausência -->
+        <figure class="chart">
+          <figcaption><strong>Rotas com mais ausências</strong><span class="muted">ausências ÷ passageiros previstos no período</span></figcaption>
+          @if (!topRoutes().length) {
+            <p class="empty muted">Nenhuma ausência registrada no período.</p>
+          } @else {
+            <ol class="ranking">
+              @for (r of topRoutes(); track r.route_id) {
+                <li [attr.aria-label]="r.name + ': ' + percent(r.rate) + ', ' + r.absent + ' ausências'">
+                  <span class="name" [title]="r.name">{{ r.name }}</span>
+                  <span class="track">
+                    <span class="bar s2" [style.width.%]="pct(r.rate ?? 0, routeMax())"></span>
+                    <span class="value">{{ percent(r.rate) }} <small>({{ r.absent }})</small></span>
+                  </span>
+                </li>
+              }
+            </ol>
+          }
+        </figure>
+      </div>
+    }
+  }
+</section>

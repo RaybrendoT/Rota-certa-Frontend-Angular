@@ -37,7 +37,7 @@ export class ScheduleListComponent implements OnInit {
   }
 
   loadCompanies(): void {
-    this.companyService.getAll().subscribe({
+    this.companyService.options().subscribe({
       next: (response) => {
         this.companyNamesById = new Map(
           this.getCompaniesFromResponse(response).map(company => [company.id, company.name])

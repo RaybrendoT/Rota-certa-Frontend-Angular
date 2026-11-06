@@ -54,7 +54,7 @@ export class RouteListComponent implements OnInit, OnDestroy {
   }
 
   loadCompanies(): void {
-    this.companyService.getAll().subscribe({
+    this.companyService.options().subscribe({
       next: (response) => {
         this.companyNamesById = new Map(
           this.getCompaniesFromResponse(response).map(company => [company.id, company.name])
@@ -65,7 +65,7 @@ export class RouteListComponent implements OnInit, OnDestroy {
   }
 
   loadVehicles(): void {
-    this.vehicleService.getAll().subscribe({
+    this.vehicleService.getAll({ page_size: 500 }).subscribe({
       next: (response) => {
         this.vehiclePlatesById = new Map(
           this.getVehiclesFromResponse(response).map(vehicle => [vehicle.id!, vehicle.plate_number])

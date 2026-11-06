@@ -1,0 +1,116 @@
+:host {
+  display: block;
+  --ok: #10b981;
+  --run: #3b82f6;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+}
+
+.muted { color: var(--rc-text-muted); }
+
+.feed {
+  padding: 18px 20px;
+  border: 1px solid var(--rc-border);
+  border-radius: var(--rc-radius);
+  background: var(--rc-surface);
+  box-shadow: var(--rc-shadow);
+  color: var(--rc-text);
+
+  > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  p { margin: 0; font-size: 14px; }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--rc-text-muted);
+
+  i { width: 8px; height: 8px; border-radius: 50%; background: var(--rc-text-muted); }
+
+  &.live {
+    color: var(--rc-success-text);
+    i { background: var(--ok); animation: pulse 1.6s infinite; }
+  }
+
+  &.connecting i { background: var(--warn); }
+  &.offline { color: var(--rc-danger-text); i { background: var(--bad); } }
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  mat-icon { flex-shrink: 0; }
+}
+
+ol {
+  max-height: 360px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+li {
+  display: grid;
+  grid-template-columns: 44px 32px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  transition: background-color 1s ease;
+
+  & + li { border-top: 1px solid var(--rc-border); }
+  &.fresh { background: var(--rc-info-bg); }
+}
+
+.time {
+  font-size: 12px;
+  color: var(--rc-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--rc-surface-muted);
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &.ok mat-icon { color: var(--ok); }
+  &.run mat-icon { color: var(--run); }
+  &.warn mat-icon { color: var(--warn); }
+  &.bad mat-icon { color: var(--bad); }
+  &.idle mat-icon { color: var(--rc-text-muted); }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+
+  strong { font-size: 14px; font-weight: 500; }
+  span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &:hover strong { text-decoration: underline; }
+}

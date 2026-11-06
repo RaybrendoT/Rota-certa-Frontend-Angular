@@ -24,14 +24,11 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [gestorGuard],
         loadComponent: () =>
-          import('./features/report/components/report-maintenance/report-maintenance.component')
-            .then(c => c.ReportMaintenanceComponent),
-        data: {
-          page: 'Dashboard', section: 'Monitoramento',
-          title: 'Dashboard em manutenção',
-          description: 'O painel ainda não está disponível.'
-        }
+          import('./features/dashboard/components/dashboard-page/dashboard-page.component')
+            .then(c => c.DashboardPageComponent),
+        data: { page: 'Dashboard', section: 'Monitoramento' }
       },
       {
         path: 'funcionarios',
@@ -99,14 +96,11 @@ export const routes: Routes = [
       },
       {
         path: 'mapa',
+        canActivate: [gestorGuard],
         loadComponent: () =>
-          import('./features/report/components/report-maintenance/report-maintenance.component')
-            .then(c => c.ReportMaintenanceComponent),
-        data: {
-          page: 'Mapa ao vivo', section: 'Monitoramento',
-          title: 'Mapa ao vivo em manutenção',
-          description: 'O mapa ao vivo ainda não está disponível.'
-        }
+          import('./features/live-map/components/live-map-page/live-map-page.component')
+            .then(c => c.LiveMapPageComponent),
+        data: { page: 'Mapa ao vivo', section: 'Monitoramento' }
       },
       {
         path: 'configuracoes',

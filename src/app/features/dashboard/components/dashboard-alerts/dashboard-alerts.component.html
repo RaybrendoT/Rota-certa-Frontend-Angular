@@ -1,0 +1,47 @@
+<section class="alerts" aria-labelledby="alerts-title">
+  <header>
+    <h3 id="alerts-title">Precisa da sua atenção</h3>
+    @if (groups().length) {
+      <span class="badge">{{ alerts().total }}</span>
+    }
+  </header>
+
+  @if (!groups().length) {
+    <p class="all-clear">
+      <mat-icon>check_circle</mat-icon>
+      Nada pendente: sem incidentes, atrasos, rotas sem veículo ou endereços para aprovar.
+    </p>
+  } @else {
+    <div class="groups">
+      @for (group of groups(); track group.kind) {
+        <article class="group" [class]="'group ' + view(group).tone">
+          <h4>
+            <mat-icon>{{ view(group).icon }}</mat-icon>
+            {{ view(group).title(group.count) }}
+          </h4>
+          <ul>
+            @for (item of visibleItems(group); track $index) {
+              <li>
+                <a [routerLink]="itemLink(group, item)">
+                  <strong>{{ itemTitle(group, item) }}</strong>
+                  <span class="detail">{{ itemDetail(group, item) }}</span>
+                  <mat-icon class="go">chevron_right</mat-icon>
+                </a>
+              </li>
+            }
+          </ul>
+          <footer>
+            @if (group.count > previewSize) {
+              <button type="button" class="toggle" (click)="toggle(group)" [attr.aria-expanded]="isExpanded(group)">
+                {{ isExpanded(group) ? 'Mostrar menos' : 'Mostrar mais ' + (group.count - previewSize) }}
+              </button>
+            }
+            <a class="open" [routerLink]="view(group).link" [queryParams]="view(group).queryParams">
+              {{ view(group).linkLabel }}
+            </a>
+          </footer>
+        </article>
+      }
+    </div>
+  }
+</section>

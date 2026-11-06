@@ -1,0 +1,41 @@
+<section class="feed" aria-labelledby="feed-title">
+  <header>
+    <h3 id="feed-title">Acontecendo {{ live() ? 'agora' : 'neste dia' }}</h3>
+    @if (live()) {
+      <span class="status" [class]="'status ' + realtime.status()" role="status">
+        <i aria-hidden="true"></i>
+        @switch (realtime.status()) {
+          @case ('live') { Ao vivo }
+          @case ('connecting') { Conectando… }
+          @default { Sem conexão · tentando de novo }
+        }
+      </span>
+    }
+  </header>
+
+  @if (loading() && !items().length) {
+    <p class="muted">Carregando eventos…</p>
+  } @else if (error() && !items().length) {
+    <p class="muted">Não foi possível carregar os eventos do dia.</p>
+  } @else if (!items().length) {
+    <p class="muted empty">
+      <mat-icon>hourglass_empty</mat-icon>
+      {{ live() ? 'Nenhum evento ainda hoje. Partidas, chegadas, atrasos e embarques aparecem aqui assim que o motorista registrar.' : 'Nenhum evento registrado neste dia.' }}
+    </p>
+  } @else {
+    <ol>
+      @for (item of items(); track key(item)) {
+        <li [class.fresh]="fresh().has(key(item))">
+          <span class="time">{{ time(item) }}</span>
+          <span class="icon" [class]="'icon ' + tone(item)"><mat-icon>{{ icon(item) }}</mat-icon></span>
+          <a class="body" [routerLink]="['/rotas', item.route_id, 'editar']">
+            <strong>{{ title(item) }}</strong>
+            <span class="muted">
+              {{ item.route_name ?? 'Rota ' + item.route_id }}@if (item.description) { · {{ item.description }} }
+            </span>
+          </a>
+        </li>
+      }
+    </ol>
+  }
+</section>

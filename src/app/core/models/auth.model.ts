@@ -17,6 +17,8 @@ export interface SessionPerson {
   email: string;
   company_id: number;
   company_name: string;
+  /** Foto do perfil como data URL, ou null (mostra as iniciais). */
+  photo?: string | null;
 }
 
 export interface LoginResponse {

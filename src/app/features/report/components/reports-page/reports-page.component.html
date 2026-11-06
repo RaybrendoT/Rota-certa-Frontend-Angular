@@ -1,0 +1,206 @@
+<section class="reports">
+  <!-- Filtros do período: valem para todas as abas -->
+  <div class="filters page-card">
+    <div class="row">
+      <div class="presets" role="radiogroup" aria-label="Período">
+        @for (p of presets; track p.id) {
+          <button type="button" role="radio" [attr.aria-checked]="preset() === p.id" [class.active]="preset() === p.id" (click)="applyPreset(p.id)">
+            {{ p.label }}
+          </button>
+        }
+      </div>
+      <label class="field">
+        <span>De</span>
+        <input type="date" [value]="from()" [max]="to()" (change)="setDate('from', $any($event.target).value)" />
+      </label>
+      <label class="field">
+        <span>Até</span>
+        <input type="date" [value]="to()" [min]="from()" (change)="setDate('to', $any($event.target).value)" />
+      </label>
+      <span class="muted days">{{ periodDays() }} {{ periodDays() === 1 ? 'dia' : 'dias' }}</span>
+    </div>
+    <div class="row">
+      <label class="field">
+        <span>Turno</span>
+        <select [value]="schedule() ?? ''" (change)="setSchedule($any($event.target).value)">
+          <option value="">Todos</option>
+          @for (s of options()?.schedules ?? []; track s.id) {
+            <option [value]="s.id" [selected]="schedule() === s.id">{{ s.time }}</option>
+          }
+        </select>
+      </label>
+      <label class="field grow">
+        <span>Rota</span>
+        <select (change)="setRoute($any($event.target).value)">
+          <option value="" [selected]="!route()">Todas</option>
+          @for (r of routeOptions(); track r.id) {
+            <option [value]="r.id" [selected]="route() === r.id">{{ r.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>Motorista</span>
+        <select (change)="setDriver($any($event.target).value)">
+          <option value="" [selected]="!driver()">Todos</option>
+          @for (d of options()?.drivers ?? []; track d.id) {
+            <option [value]="d.id" [selected]="driver() === d.id">{{ d.name }}</option>
+          }
+        </select>
+      </label>
+      @if (hasFilters()) {
+        <button mat-button (click)="clearFilters()"><mat-icon>filter_alt_off</mat-icon>Limpar filtros</button>
+      }
+    </div>
+  </div>
+
+  <!-- Abas -->
+  <nav class="tabs" role="tablist" aria-label="Relatórios">
+    @for (t of tabs; track t.kind) {
+      <button type="button" role="tab" [attr.aria-selected]="tab() === t.kind" [class.active]="tab() === t.kind" (click)="setTab(t.kind)">
+        <mat-icon>{{ t.icon }}</mat-icon>{{ t.label }}
+      </button>
+    }
+  </nav>
+
+  @if (error()) {
+    <div class="error-banner" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+  }
+
+  <!-- Números do período -->
+  <dl class="kpis">
+    @switch (tab()) {
+      @case ('attendance') {
+        @if (attendance(); as a) {
+          <div><dt>Colaboradores</dt><dd>{{ format(a.totals.people) }}</dd></div>
+          <div><dt>Presença</dt><dd>{{ percent(a.totals.presence_rate) }} <small>{{ format(a.totals.confirmed) }} embarques em {{ format(a.totals.expected) }} previstos</small></dd></div>
+          <div><dt>Ausências</dt><dd>{{ format(a.totals.absent) }} <small>{{ percent(a.totals.absence_rate) }} dos previstos</small></dd></div>
+          <div matTooltip="Colaboradores com dias previstos e nenhum embarque registrado no período"><dt>Nunca embarcaram</dt><dd>{{ format(a.totals.never_boarded) }}</dd></div>
+        }
+      }
+      @case ('routes') {
+        @if (routesData(); as r) {
+          <div><dt>Viagens realizadas</dt><dd>{{ format(r.totals.done) }} <small>de {{ format(r.totals.planned) }} previstas · {{ percent(r.totals.completion_rate) }}</small></dd></div>
+          <div><dt>Pontualidade</dt><dd>{{ percent(r.totals.punctuality_rate) }}</dd></div>
+          <div><dt>Ocupação média</dt><dd>{{ percent(r.totals.avg_occupancy) }}</dd></div>
+          <div><dt>Ocorrências</dt><dd>{{ r.totals.delays + r.totals.incidents }} <small>{{ r.totals.delays }} atrasos · {{ r.totals.incidents }} incidentes</small></dd></div>
+        }
+      }
+      @case ('drivers') {
+        @if (driversData(); as d) {
+          <div><dt>Motoristas e veículos</dt><dd>{{ d.totals.drivers }}</dd></div>
+        }
+      }
+      @case ('events') {
+        @if (eventsData(); as e) {
+          <div><dt>Ocorrências</dt><dd>{{ format(e.totals.events) }}</dd></div>
+          <div><dt>Atrasos</dt><dd>{{ format(e.totals.delays) }}</dd></div>
+          <div><dt>Incidentes</dt><dd>{{ format(e.totals.incidents) }}</dd></div>
+        }
+      }
+    }
+  </dl>
+
+  <!-- Tabela -->
+  <div class="page-card table-card">
+    <div class="table-toolbar">
+      <label class="search">
+        <mat-icon>search</mat-icon>
+        <input type="search" placeholder="Buscar na tabela" [value]="search()" (input)="search.set($any($event.target).value)" aria-label="Buscar na tabela" />
+      </label>
+      @if (tab() === 'events') {
+        <div class="presets small" role="radiogroup" aria-label="Tipo de ocorrência">
+          <button type="button" role="radio" [attr.aria-checked]="!eventType()" [class.active]="!eventType()" (click)="setEventType(null)">Todas</button>
+          <button type="button" role="radio" [attr.aria-checked]="eventType() === 'delay'" [class.active]="eventType() === 'delay'" (click)="setEventType('delay')">Atrasos</button>
+          <button type="button" role="radio" [attr.aria-checked]="eventType() === 'incident'" [class.active]="eventType() === 'incident'" (click)="setEventType('incident')">Incidentes</button>
+        </div>
+      }
+      <span class="muted count">{{ format(rows().length) }} {{ rows().length === 1 ? 'linha' : 'linhas' }}</span>
+      <button mat-stroked-button (click)="exportCsv()" [disabled]="exporting() || loading()" matTooltip="Baixa a tabela desta aba para abrir no Excel">
+        <mat-icon>download</mat-icon>Exportar CSV
+      </button>
+    </div>
+
+    @if (tab() === 'attendance') {
+      <p class="muted hint">Clique num colaborador para ver os dias dele.</p>
+    }
+    @if (tab() === 'events' && eventsData()?.totals?.truncated) {
+      <p class="muted hint">Mostrando as 2.000 ocorrências mais recentes. Diminua o período para ver todas.</p>
+    }
+
+    @if (loading()) {
+      <div class="center"><mat-spinner diameter="32" /></div>
+    } @else if (!rows().length) {
+      <p class="empty muted">
+        <mat-icon>inbox</mat-icon>
+        {{ search() ? 'Nenhuma linha com esse termo.' : 'Nada registrado no período com esses filtros.' }}
+      </p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              @for (c of columns(); track c.key) {
+                <th [class.num]="isNumeric(c)" [attr.aria-sort]="sortKey() === c.key ? (sortDesc() ? 'descending' : 'ascending') : null">
+                  <button type="button" (click)="sortBy(c.key)" [matTooltip]="c.hint ?? ''" [matTooltipDisabled]="!c.hint">
+                    {{ c.label }}
+                    @if (sortKey() === c.key) { <mat-icon>{{ sortDesc() ? 'arrow_downward' : 'arrow_upward' }}</mat-icon> }
+                  </button>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track $index) {
+              <tr [class.clickable]="tab() === 'attendance'" (click)="openDetail(row)"
+                [attr.tabindex]="tab() === 'attendance' ? 0 : null" (keydown.enter)="openDetail(row)">
+                @for (c of columns(); track c.key) {
+                  <td [class.num]="isNumeric(c)" [class.wrap]="c.key === 'description' || c.key === 'routes'"
+                    [class.tag-delay]="c.key === 'type' && row['type'] === 'delay'" [class.tag-incident]="c.key === 'type' && row['type'] === 'incident'">
+                    {{ cell(row, c) }}
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Linha do tempo do colaborador -->
+  @if (detail() || detailLoading()) {
+    <div class="drawer-backdrop" (click)="detail.set(null)"></div>
+    <aside class="drawer" role="dialog" aria-label="Dias do colaborador">
+      @if (detail(); as d) {
+        <header>
+          <div>
+            <h3>{{ d.person.name }}</h3>
+            <p class="muted">{{ d.person.code || 'sem matrícula' }} · {{ dateBr(d.from) }} a {{ dateBr(d.to) }}</p>
+          </div>
+          <button mat-icon-button (click)="detail.set(null)" aria-label="Fechar"><mat-icon>close</mat-icon></button>
+        </header>
+        <ul class="legend">
+          <li><i class="dot confirmed"></i>Embarcou</li>
+          <li><i class="dot absent"></i>Ausente</li>
+          <li><i class="dot no_record"></i>Sem registro</li>
+        </ul>
+        <ol class="timeline">
+          @for (day of d.timeline; track day.date + day.route_id) {
+            <li>
+              <span class="when">{{ weekday(day.date) }} {{ dateBr(day.date).slice(0, 5) }}</span>
+              <i class="dot" [class]="'dot ' + day.status"></i>
+              <span class="what">
+                <strong>{{ day.status === 'confirmed' ? 'Embarcou' : day.status === 'absent' ? 'Ausente' : 'Sem registro' }}</strong>
+                <span class="muted">{{ day.time ?? 'avulsa' }} · {{ day.route_name }}</span>
+              </span>
+            </li>
+          } @empty {
+            <li class="muted">Nenhum dia previsto no período.</li>
+          }
+        </ol>
+      } @else {
+        <div class="center"><mat-spinner diameter="32" /></div>
+      }
+    </aside>
+  }
+</section>

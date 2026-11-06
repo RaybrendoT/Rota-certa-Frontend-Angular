@@ -67,16 +67,20 @@ export class VehicleDetailComponent implements OnInit {
   }
 
   loadCompanies(): void {
-    this.companyService.getAll().subscribe({
+    this.companyService.options().subscribe({
       next: (response) => {
         this.companyList = this.getCompaniesFromResponse(response);
+        // Gestor: a única opção é a própria empresa; já deixa escolhida no cadastro novo.
+        if (this.companyList.length === 1 && !this.form.value.company) {
+          this.form.patchValue({ company: this.companyList[0].id });
+        }
       },
       error: (err) => console.error('Erro ao carregar empresas:', err)
     });
   }
 
   loadDrivers(): void {
-    this.employeeService.getAll().subscribe({
+    this.employeeService.getAll({ type: 'DRIVER', page_size: 500 }).subscribe({
       next: (response) => {
         this.driverList = this.getPeopleFromResponse(response)
           .filter(person => person.type === 'DRIVER');

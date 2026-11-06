@@ -1,0 +1,118 @@
+<section class="live-map">
+  <aside class="panel">
+    <header>
+      <div class="title">
+        <h2>Rotas de hoje</h2>
+        <span class="status" [class]="'status ' + realtime.status()" role="status">
+          <i aria-hidden="true"></i>
+          @switch (realtime.status()) {
+            @case ('live') { Ao vivo }
+            @case ('connecting') { Conectando… }
+            @default { Sem conexão }
+          }
+        </span>
+      </div>
+      <p class="muted">
+        {{ counts().on_map }} ônibus no mapa ·
+        {{ counts().in_progress }} em andamento hoje
+      </p>
+      <div class="map-actions">
+        <button mat-stroked-button (click)="fitAll()"><mat-icon>zoom_out_map</mat-icon>Ver todos</button>
+        <button mat-stroked-button (click)="load()"><mat-icon>refresh</mat-icon>Recarregar</button>
+      </div>
+    </header>
+
+    <div class="filters" role="tablist" aria-label="Filtrar rotas">
+      <button role="tab" [attr.aria-selected]="filter() === 'all'" [class.active]="filter() === 'all'" (click)="filter.set('all')">
+        Todas <b>{{ counts().all }}</b>
+      </button>
+      <button role="tab" [attr.aria-selected]="filter() === 'in_progress'" [class.active]="filter() === 'in_progress'" (click)="filter.set('in_progress')">
+        Em andamento <b>{{ counts().in_progress }}</b>
+      </button>
+      <button role="tab" [attr.aria-selected]="filter() === 'delayed'" [class.active]="filter() === 'delayed'" (click)="filter.set('delayed')">
+        Atrasadas <b>{{ counts().delayed }}</b>
+      </button>
+      <button role="tab" [attr.aria-selected]="filter() === 'no_signal'" [class.active]="filter() === 'no_signal'" (click)="filter.set('no_signal')">
+        Sem sinal <b>{{ counts().no_signal }}</b>
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="error-banner" role="alert">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ error() }}</span>
+        <button mat-button (click)="load()">Tentar de novo</button>
+      </div>
+    }
+
+    <ul class="routes">
+      @if (loading() && !routes().length) {
+        <li class="muted placeholder">Carregando rotas…</li>
+      }
+      @for (route of visible(); track route.id) {
+        <li>
+          <button type="button" [class.selected]="selectedId() === route.id" (click)="select(route)">
+            <span class="dot" [class]="'dot ' + tone(route)" aria-hidden="true"></span>
+            <span class="info">
+              <strong>{{ route.name }}</strong>
+              <span class="muted">
+                {{ route.time ?? 'avulsa' }} · {{ route.driver_name ?? 'sem motorista' }}
+                @if (route.vehicle) { · {{ route.vehicle.plate }} }
+              </span>
+              <span class="state" [class]="'state ' + tone(route)">{{ statusLabel(route) }}</span>
+            </span>
+            @if (route.location && route.state !== 'finished') {
+              <mat-icon class="on-map" aria-label="No mapa">my_location</mat-icon>
+            }
+          </button>
+        </li>
+      } @empty {
+        @if (!loading()) {
+          <li class="muted placeholder">
+            {{ filter() === 'all' ? 'Nenhuma rota prevista para hoje.' : 'Nenhuma rota neste filtro.' }}
+          </li>
+        }
+      }
+    </ul>
+
+    <p class="footnote muted">
+      O ônibus aparece quando o motorista inicia a rota no app; a posição chega a cada poucos segundos.
+      Sem posição nova há mais de {{ (data()?.stale_after_seconds ?? 120) / 60 }} min, a rota fica como "sinal perdido".
+    </p>
+  </aside>
+
+  <div class="map-wrap">
+    <div #map class="map" role="application" aria-label="Mapa com a posição dos ônibus"></div>
+    @if (mapState() !== 'ready') {
+      <div class="map-overlay" role="status">
+        @switch (mapState()) {
+          @case ('loading') {
+            <mat-icon>map</mat-icon>
+            <span>Carregando o Google Maps…</span>
+          }
+          @case ('missing-key') {
+            <mat-icon>key_off</mat-icon>
+            <strong>Falta a chave do Google Maps</strong>
+            <span>
+              Coloque a chave de navegador (Maps JavaScript API) em <code>googleMapsApiKey</code> no
+              <code>assets/config/config.local.json</code> (modelo em <code>config.local.example.json</code>) e recarregue.
+              A lista de rotas ao lado continua funcionando ao vivo.
+            </span>
+          }
+          @default {
+            <mat-icon>cloud_off</mat-icon>
+            <strong>Não foi possível carregar o Google Maps</strong>
+            <span>Confira a chave, se a Maps JavaScript API está ativada e se este endereço está liberado na chave.</span>
+            <button mat-stroked-button (click)="retryMap()">Tentar de novo</button>
+          }
+        }
+      </div>
+    }
+    <ul class="legend" aria-label="Legenda">
+      <li><i class="dot run"></i>Em andamento</li>
+      <li><i class="dot late"></i>Atrasada</li>
+      <li><i class="dot stale"></i>Sinal perdido</li>
+      <li><mat-icon>factory</mat-icon>Empresa</li>
+    </ul>
+  </div>
+</section>
