@@ -1,0 +1,492 @@
+@if (loading()) {
+  <div class="wizard-state"><mat-spinner diameter="36"></mat-spinner></div>
+} @else if (loadError() || !options()) {
+  <div class="wizard-state page-card">
+    <p>{{ loadError() }}</p>
+    <button mat-stroked-button (click)="cancel()">Voltar para Rotas</button>
+  </div>
+} @else {
+  @let opts = options()!;
+  <div class="wizard" [class.wizard--edit]="isEdit()">
+    <section class="wizard-main page-card">
+      @if (!isEdit()) {
+        <p class="wizard-intro">
+          Monte a rota passo a passo. Prefere descrever o que precisa? Use o
+          <a routerLink="/planejamento">Planejamento com IA</a>.
+        </p>
+      }
+
+      <mat-stepper
+        #stepper
+        class="route-stepper"
+        [orientation]="isEdit() ? 'vertical' : 'horizontal'"
+        [linear]="!isEdit()"
+        (selectionChange)="onStepChange($event)">
+
+        <!-- 1. Dados da rota -->
+        <mat-step [stepControl]="basics">
+          <ng-template matStepLabel>
+            <span class="step-label">Dados da rota</span>
+            @if (basicsSummary()) { <span class="step-summary">{{ basicsSummary() }}</span> }
+          </ng-template>
+
+          <form [formGroup]="basics" class="step-body">
+            <p class="step-help">Se a rota se repete ou é de um dia só, o horário de chegada na empresa e o nome.</p>
+
+            <mat-radio-group formControlName="kind" class="kind-options" aria-label="Tipo de rota">
+              <mat-radio-button value="fixed" class="option-card" [class.option-card--selected]="basicsValue().kind === 'fixed'">
+                <strong>Fixa</strong>
+                <span>Repete nos dias do turno. Os colaboradores veem a rota no app.</span>
+              </mat-radio-button>
+              <mat-radio-button value="extra" class="option-card" [class.option-card--selected]="basicsValue().kind === 'extra'">
+                <strong>Avulsa</strong>
+                <span>Um dia só, como as rotas do planejamento com IA.</span>
+              </mat-radio-button>
+            </mat-radio-group>
+
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Turno (chegada na empresa)</mat-label>
+                <mat-select formControlName="schedule">
+                  @for (schedule of opts.schedules; track schedule.id) {
+                    <mat-option [value]="schedule.id">{{ schedule.label }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Não achou o horário? Cadastre em <a routerLink="/horarios">Horários</a>.</mat-hint>
+                <mat-error>Escolha o turno.</mat-error>
+              </mat-form-field>
+
+              @if (basicsValue().kind === 'extra') {
+                <mat-form-field appearance="outline">
+                  <mat-label>Data</mat-label>
+                  <input matInput type="date" formControlName="service_date">
+                  <mat-error>Informe a data da rota avulsa.</mat-error>
+                </mat-form-field>
+              }
+
+              <mat-form-field appearance="outline" class="span-2">
+                <mat-label>Nome da rota</mat-label>
+                <input matInput formControlName="name" maxlength="255" placeholder="Ex.: Cidade Nova · 07h30">
+                <mat-hint>Em branco, sugerimos pelos bairros das paradas.</mat-hint>
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-button type="button" (click)="cancel()">Cancelar</button>
+            <span class="spacer"></span>
+            <button mat-flat-button color="primary" type="button" matStepperNext>Próximo</button>
+          </div>
+        </mat-step>
+
+        <!-- 2. Ônibus e motorista -->
+        <mat-step [stepControl]="vehicleForm">
+          <ng-template matStepLabel>
+            <span class="step-label">Ônibus e motorista</span>
+            @if (vehicleSummary()) { <span class="step-summary">{{ vehicleSummary() }}</span> }
+          </ng-template>
+
+          <form [formGroup]="vehicleForm" class="step-body">
+            <p class="step-help">
+              O motorista vem do cadastro do ônibus. Quem já tem rota perto deste horário, ou ônibus sem motorista,
+              não pode ser escolhido.
+            </p>
+            @if (vehiclesLoading()) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
+
+            <mat-radio-group formControlName="vehicle" class="vehicle-grid" aria-label="Ônibus">
+              @for (vehicle of vehicles(); track vehicle.id) {
+                <mat-radio-button
+                  [value]="vehicle.id"
+                  [disabled]="vehicleDisabled(vehicle)"
+                  class="option-card"
+                  [class.option-card--selected]="vehicleValue() === vehicle.id">
+                  <span class="vehicle-head">
+                    <strong>{{ vehicle.plate }}</strong>
+                    @if (!vehicle.driver) {
+                      <span class="chip chip--warn">Sem motorista</span>
+                    } @else if (vehicle.conflict) {
+                      <span class="chip chip--warn">Ocupado</span>
+                    } @else {
+                      <span class="chip chip--ok">Livre</span>
+                    }
+                  </span>
+                  <span>{{ vehicle.model }} · {{ vehicle.capacity }} lugares</span>
+                  <span class="vehicle-driver">
+                    <mat-icon>person</mat-icon>{{ vehicle.driver?.name ?? 'Cadastre o motorista em Veículos' }}
+                  </span>
+                  @if (vehicle.conflict) { <span class="vehicle-conflict">Já tem a rota {{ vehicle.conflict }}</span> }
+                </mat-radio-button>
+              } @empty {
+                @if (!vehiclesLoading()) {
+                  <p class="muted">Nenhum ônibus ativo. <a routerLink="/veiculos">Cadastrar ônibus</a></p>
+                }
+              }
+            </mat-radio-group>
+          </form>
+
+          <div class="step-actions">
+            <button mat-button type="button" matStepperPrevious>Voltar</button>
+            <span class="spacer"></span>
+            <button mat-flat-button color="primary" type="button" matStepperNext>Próximo</button>
+          </div>
+        </mat-step>
+
+        <!-- 3. Colaboradores -->
+        <mat-step [stepControl]="passengersForm">
+          <ng-template matStepLabel>
+            <span class="step-label">Colaboradores</span>
+            @if (selectedCount()) { <span class="step-summary">{{ selectedCount() }} selecionados</span> }
+          </ng-template>
+
+          <div class="step-body">
+            <div class="passengers-head">
+              <p class="step-help">
+                Marque quem vai na rota, filtre por bairro ou importe a mesma lista CSV/XLSX do planejamento com IA.
+              </p>
+              <div class="capacity" [class.capacity--over]="overCapacity()">
+                <div class="capacity-text">
+                  <span>Lotação</span>
+                  <strong>{{ selectedCount() }}@if (capacity()) { de {{ capacity() }} lugares }</strong>
+                </div>
+                <mat-progress-bar mode="determinate" [value]="loadPercent()"></mat-progress-bar>
+              </div>
+            </div>
+
+            <div class="toolbar">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="toolbar-search">
+                <mat-label>Buscar</mat-label>
+                <mat-icon matPrefix>search</mat-icon>
+                <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Nome ou matrícula">
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="toolbar-bairro">
+                <mat-label>Bairro</mat-label>
+                <mat-select multiple [ngModel]="bairroFilter()" (ngModelChange)="bairroFilter.set($event)">
+                  @for (bairro of bairros(); track bairro) {
+                    <mat-option [value]="bairro">{{ bairro }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-slide-toggle [ngModel]="onlySelected()" (ngModelChange)="onlySelected.set($event)">
+                Só selecionados
+              </mat-slide-toggle>
+              <span class="spacer"></span>
+              <input #listFile type="file" accept=".csv,.xlsx,.txt" hidden (change)="onListSelected($event)">
+              <button mat-stroked-button type="button" (click)="listFile.click()" [disabled]="importing()">
+                <mat-icon>upload_file</mat-icon>
+                Importar lista
+              </button>
+            </div>
+
+            @if (listImport(); as imported) {
+              <div class="notice notice--info">
+                <mat-icon>description</mat-icon>
+                <span>
+                  {{ imported.file_name }}: {{ imported.matched.length }} marcados@if (imported.ambiguous.length) {,
+                  {{ imported.ambiguous.length }} com mais de um cadastro}@if (imported.not_found.length) {,
+                  {{ imported.not_found.length }} não encontrados}.
+                </span>
+                <button mat-icon-button type="button" (click)="listImport.set(null)" aria-label="Fechar aviso da lista">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+
+            <div class="table-box">
+              <table class="people-table">
+                <thead>
+                  <tr>
+                    <th class="col-check">
+                      <mat-checkbox
+                        [checked]="allVisibleSelected()"
+                        [indeterminate]="someVisibleSelected()"
+                        (change)="toggleAllVisible()"
+                        aria-label="Selecionar todos os visíveis"></mat-checkbox>
+                    </th>
+                    <th>Nome</th>
+                    <th>Matrícula</th>
+                    <th>Bairro</th>
+                    <th>Ponto mais próximo</th>
+                    <th class="num">Distância</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (employee of filteredEmployees(); track employee.id) {
+                    <tr [class.selected]="isSelected(employee)" [class.disabled]="!employee.has_home" (click)="toggle(employee)">
+                      <td class="col-check">
+                        <mat-checkbox
+                          [checked]="isSelected(employee)"
+                          [disabled]="!employee.has_home && !isSelected(employee)"
+                          (click)="$event.stopPropagation()"
+                          (change)="toggle(employee)"
+                          [aria-label]="'Selecionar ' + employee.name"></mat-checkbox>
+                      </td>
+                      <td>
+                        {{ employee.name }}
+                        @if (employee.fixed_routes.length) {
+                          <span class="tag" [matTooltip]="employee.fixed_routes.join(' · ')">
+                            em {{ employee.fixed_routes.length }} rota{{ employee.fixed_routes.length > 1 ? 's' : '' }}
+                          </span>
+                        }
+                      </td>
+                      <td class="muted">{{ employee.code }}</td>
+                      <td>
+                        @if (employee.has_home) { {{ employee.bairro || '—' }} } @else { <span class="tag tag--warn">sem endereço</span> }
+                      </td>
+                      <td>{{ employee.nearest_point?.name ?? '—' }}</td>
+                      <td class="num" [class.far]="(employee.nearest_point?.distance_m ?? 0) > 1000">
+                        {{ distanceLabel(employee.nearest_point?.distance_m) }}
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="6" class="table-empty">Ninguém com esse filtro.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="table-foot">
+              Mostrando {{ filteredEmployees().length }} de {{ opts.employees.length }} · {{ selectedCount() }} selecionados
+              @if (selectedCount()) {
+                <button mat-button type="button" (click)="clearSelection()">Limpar seleção</button>
+              }
+            </p>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button type="button" matStepperPrevious>Voltar</button>
+            <span class="spacer"></span>
+            <button mat-flat-button color="primary" type="button" matStepperNext>Próximo</button>
+          </div>
+        </mat-step>
+
+        <!-- 4. Paradas -->
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label">Paradas</span>
+            @if (preview()?.stops?.length) { <span class="step-summary">{{ preview()!.stops.length }} pontos</span> }
+          </ng-template>
+
+          <div class="step-body">
+            <div class="stops-head">
+              <p class="step-help">
+                Cada colaborador embarca no ponto de encontro mais perto de casa. Arraste para mudar a ordem; use o menu
+                de cada pessoa para trocá-la de parada.
+              </p>
+              <button mat-stroked-button type="button" (click)="requestPreview(true)" [disabled]="previewLoading() || !preview()">
+                <mat-icon>route</mat-icon>
+                Ordenar pelo menor trajeto
+              </button>
+            </div>
+
+            @if (previewLoading()) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
+            @if (previewError()) {
+              <div class="notice notice--error"><mat-icon>error</mat-icon><span>{{ previewError() }}</span></div>
+            }
+            <ng-container *ngTemplateOutlet="warningsList"></ng-container>
+
+            @if (preview(); as plan) {
+              <ol class="stop-list" cdkDropList (cdkDropListDropped)="dropStop($event)">
+                @for (stop of plan.stops; track stop.meeting_point.id; let index = $index) {
+                  <li class="stop" cdkDrag cdkDragLockAxis="y">
+                    <div class="stop-row">
+                      <button mat-icon-button type="button" cdkDragHandle class="drag-handle"
+                              [attr.aria-label]="'Arrastar ' + stop.meeting_point.name">
+                        <mat-icon>drag_indicator</mat-icon>
+                      </button>
+                      <span class="stop-seq">{{ index + 1 }}</span>
+                      <span class="stop-info">
+                        <strong>{{ stop.meeting_point.name }}</strong>
+                        <span>
+                          {{ stop.passengers.length }} pessoa{{ stop.passengers.length === 1 ? '' : 's' }}
+                          @if (stop.meeting_point.home) { · embarque em casa }
+                        </span>
+                      </span>
+                      <span class="stop-eta">{{ stop.eta }}</span>
+                      @if (!stop.passengers.length) {
+                        <button mat-icon-button type="button" (click)="removeStop(stop.meeting_point.id)"
+                                matTooltip="Remover parada" aria-label="Remover parada">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      }
+                    </div>
+                    @if (stop.passengers.length) {
+                      <div class="riders">
+                        @for (rider of stop.passengers; track rider.id) {
+                          <span class="rider" [class.rider--far]="(rider.distance_m ?? 0) > 1000">
+                            {{ rider.name }}
+                            <small>{{ distanceLabel(rider.distance_m) }}</small>
+                            <button mat-icon-button type="button" class="rider-menu"
+                                    [matMenuTriggerFor]="riderMenu"
+                                    [matMenuTriggerData]="{ personId: rider.id, pointId: stop.meeting_point.id }"
+                                    [attr.aria-label]="'Opções de ' + rider.name">
+                              <mat-icon>more_vert</mat-icon>
+                            </button>
+                          </span>
+                        }
+                      </div>
+                    }
+                    <div class="stop-placeholder" *cdkDragPlaceholder></div>
+                  </li>
+                }
+                <li class="stop stop--destination">
+                  <div class="stop-row">
+                    <span class="drag-spacer"></span>
+                    <span class="stop-seq stop-seq--destination"><mat-icon>flag</mat-icon></span>
+                    <span class="stop-info"><strong>Empresa</strong><span>Destino · chegada do turno</span></span>
+                    <span class="stop-eta">{{ plan.arrival }}</span>
+                  </div>
+                </li>
+              </ol>
+
+              <div class="add-stop">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Adicionar parada</mat-label>
+                  <mat-select [ngModel]="addPoint()" (ngModelChange)="addPoint.set($event)">
+                    @for (point of availablePoints(); track point.id) {
+                      <mat-option [value]="point.id">{{ point.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-button type="button" (click)="addStop()" [disabled]="!addPoint()">Adicionar</button>
+              </div>
+              <p class="table-foot">
+                Horários estimados. Saída do primeiro ponto às {{ plan.departure ?? '—' }} · {{ decimal(plan.distance_km) }} km ·
+                cerca de {{ plan.duration_min }} min.
+              </p>
+            }
+          </div>
+
+          <div class="step-actions">
+            <button mat-button type="button" matStepperPrevious>Voltar</button>
+            <span class="spacer"></span>
+            <button mat-flat-button color="primary" type="button" matStepperNext>Próximo</button>
+          </div>
+        </mat-step>
+
+        <!-- 5. Revisão -->
+        <mat-step>
+          <ng-template matStepLabel><span class="step-label">Revisão</span></ng-template>
+
+          <div class="step-body">
+            <p class="step-help">Confira antes de salvar. Depois, a rota continua editável em Rotas.</p>
+            @if (previewLoading()) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
+
+            @if (preview(); as plan) {
+              <div class="review-grid">
+                <div class="review-card">
+                  <div class="review-head"><span>Rota</span><button mat-button type="button" (click)="goTo(STEP.basics)">Editar</button></div>
+                  <strong>{{ basicsValue().name || 'Sem nome' }}</strong>
+                  <span>{{ basicsSummary() }}</span>
+                </div>
+                <div class="review-card">
+                  <div class="review-head"><span>Ônibus</span><button mat-button type="button" (click)="goTo(STEP.vehicle)">Editar</button></div>
+                  <strong>{{ plan.vehicle ? plan.vehicle.plate + ' · ' + plan.vehicle.model : 'Não escolhido' }}</strong>
+                  <span>{{ plan.driver ? 'Motorista ' + plan.driver.name : 'Sem motorista' }}</span>
+                </div>
+                <div class="review-card">
+                  <div class="review-head"><span>Lotação</span><button mat-button type="button" (click)="goTo(STEP.passengers)">Editar</button></div>
+                  <strong>{{ plan.load }}@if (plan.vehicle) { de {{ plan.vehicle.capacity }} lugares }</strong>
+                  <mat-progress-bar mode="determinate"
+                                    [value]="plan.vehicle ? (plan.load / plan.vehicle.capacity) * 100 : 0"></mat-progress-bar>
+                </div>
+              </div>
+
+              <div class="review-grid review-grid--two">
+                <div class="review-card">
+                  <div class="review-head">
+                    <span>Trajeto · {{ plan.stops.length }} paradas</span>
+                    <button mat-button type="button" (click)="goTo(STEP.stops)">Editar</button>
+                  </div>
+                  <ol class="timeline">
+                    @for (stop of plan.stops; track stop.meeting_point.id) {
+                      <li><span class="time">{{ stop.eta }}</span><span class="grow">{{ stop.meeting_point.name }}</span><span class="muted">{{ stop.passengers.length }}</span></li>
+                    }
+                    <li class="timeline-end"><span class="time">{{ plan.arrival }}</span><strong class="grow">Empresa</strong></li>
+                  </ol>
+                </div>
+                <div class="review-notes">
+                  <ng-container *ngTemplateOutlet="warningsList"></ng-container>
+                  @if (plan.can_save) {
+                    <div class="notice notice--ok"><mat-icon>check_circle</mat-icon><span>Motorista livre e lotação dentro do limite.</span></div>
+                  }
+                  <div class="notice notice--info">
+                    <mat-icon>notifications</mat-icon>
+                    <span>Ao salvar, quem entrou ou mudou de parada é avisado no app, e o motorista recebe a rota.</span>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (saveError()) {
+              <div class="notice notice--error"><mat-icon>error</mat-icon><span>{{ saveError() }}</span></div>
+            }
+          </div>
+
+          <div class="step-actions">
+            <button mat-button type="button" matStepperPrevious>Voltar</button>
+            <span class="spacer"></span>
+            <button mat-flat-button color="primary" type="button" (click)="save()"
+                    [disabled]="saving() || previewLoading() || !preview()?.can_save">
+              {{ saving() ? 'Salvando…' : isEdit() ? 'Salvar alterações' : 'Criar rota' }}
+            </button>
+          </div>
+        </mat-step>
+      </mat-stepper>
+    </section>
+
+    @if (isEdit()) {
+      <aside class="wizard-summary page-card" aria-label="Resumo da rota">
+        <h2>Resumo</h2>
+        <p class="muted">Atualiza a cada mudança.</p>
+        @if (preview(); as plan) {
+          <dl class="summary-grid">
+            <div><dt>Saída</dt><dd>{{ plan.departure ?? '—' }}</dd></div>
+            <div><dt>Chegada</dt><dd>{{ plan.arrival }}</dd></div>
+            <div><dt>Trajeto</dt><dd>{{ decimal(plan.distance_km) }} km</dd></div>
+            <div><dt>Paradas</dt><dd>{{ plan.stops.length }}</dd></div>
+          </dl>
+          <div class="capacity" [class.capacity--over]="plan.vehicle && plan.load > plan.vehicle.capacity">
+            <div class="capacity-text">
+              <span>Lotação</span><strong>{{ plan.load }}@if (plan.vehicle) { / {{ plan.vehicle.capacity }} }</strong>
+            </div>
+            <mat-progress-bar mode="determinate"
+                              [value]="plan.vehicle ? (plan.load / plan.vehicle.capacity) * 100 : 0"></mat-progress-bar>
+          </div>
+          @if (errors().length) {
+            <div class="notice notice--error"><mat-icon>error</mat-icon><span>{{ errors().length }} erro(s) impedem salvar.</span></div>
+          } @else if (notices().length) {
+            <div class="notice notice--warn"><mat-icon>warning</mat-icon><span>{{ notices().length }} aviso(s) para conferir.</span></div>
+          }
+        }
+        <button mat-flat-button color="primary" type="button" (click)="save()"
+                [disabled]="saving() || previewLoading() || !preview()?.can_save">
+          {{ saving() ? 'Salvando…' : 'Salvar alterações' }}
+        </button>
+        <button mat-button type="button" (click)="cancel()">Cancelar</button>
+      </aside>
+    }
+  </div>
+}
+
+<ng-template #warningsList>
+  @for (warning of errors(); track warning.message) {
+    <div class="notice notice--error"><mat-icon>error</mat-icon><span>{{ warning.message }}</span></div>
+  }
+  @for (warning of notices(); track warning.message) {
+    <div class="notice notice--warn"><mat-icon>warning</mat-icon><span>{{ warning.message }}</span></div>
+  }
+</ng-template>
+
+<mat-menu #riderMenu="matMenu">
+  <ng-template matMenuContent let-personId="personId" let-pointId="pointId">
+    @for (stop of otherStops(pointId); track stop.meeting_point.id) {
+      <button mat-menu-item type="button" (click)="movePassenger(personId, stop.meeting_point.id)">
+        <mat-icon>swap_horiz</mat-icon>
+        <span>Mover para {{ stop.meeting_point.name }}</span>
+      </button>
+    }
+    <button mat-menu-item type="button" (click)="removeFromRoute(personId)">
+      <mat-icon>person_remove</mat-icon>
+      <span>Tirar da rota</span>
+    </button>
+  </ng-template>
+</mat-menu>
