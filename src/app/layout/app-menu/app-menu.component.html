@@ -14,26 +14,27 @@
 
     <nav class="sidebar-nav">
       <!-- Seções seguem a rotina do gestor: acompanhar → resolver pendências → operar → cadastrar → analisar. -->
-      <div class="menu-section">
-        <div class="menu-title">MONITORAMENTO</div>
-        <a routerLink="/dashboard" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
-          <mat-icon>dashboard</mat-icon>
-          <span class="menu-label">Dashboard</span>
-        </a>
-        <a routerLink="/mapa" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Mapa ao vivo' : ''" matTooltipPosition="right">
-          <mat-icon>near_me</mat-icon>
-          <span class="menu-label">Mapa ao vivo</span>
-        </a>
-        @if (auth.isManager()) {
+      <!-- Monitoramento é do gestor (gestorGuard): para o gerente estes links só voltavam ao início. -->
+      @if (auth.isManager()) {
+        <div class="menu-section">
+          <div class="menu-title">MONITORAMENTO</div>
+          <a routerLink="/dashboard" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
+            <mat-icon>dashboard</mat-icon>
+            <span class="menu-label">Dashboard</span>
+          </a>
+          <a routerLink="/mapa" class="menu-item" routerLinkActive="active"
+             [matTooltip]="collapsed() ? 'Mapa ao vivo' : ''" matTooltipPosition="right">
+            <mat-icon>near_me</mat-icon>
+            <span class="menu-label">Mapa ao vivo</span>
+          </a>
           <a routerLink="/eventos-rota" class="menu-item" routerLinkActive="active"
              [matTooltip]="collapsed() ? 'Ocorrências' : ''" matTooltipPosition="right">
             <mat-icon>notification_important</mat-icon>
             <span class="menu-label">Ocorrências</span>
           </a>
-        }
-      </div>
+        </div>
+      }
   
       @if (auth.isGerente()) {
         <div class="menu-section">
