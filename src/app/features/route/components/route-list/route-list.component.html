@@ -1,5 +1,11 @@
 <mat-card class="list-card">
-  <div class="list-header">
+  <div class="list-header route-list-header">
+    <mat-button-toggle-group class="kind-filter" [value]="kindFilter" (change)="onKindChange($event.value)"
+                             hideSingleSelectionIndicator aria-label="Tipo de rota">
+      <mat-button-toggle value="all">Todas</mat-button-toggle>
+      <mat-button-toggle value="fixed">Fixas (diárias)</mat-button-toggle>
+      <mat-button-toggle value="extra">Avulsas (montadas)</mat-button-toggle>
+    </mat-button-toggle-group>
     <button mat-raised-button color="primary" routerLink="novo">
       <mat-icon>add</mat-icon>
       Nova Rota
@@ -11,6 +17,13 @@
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>Nome</th>
         <td mat-cell *matCellDef="let route">{{ route.name }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="kind">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let route">
+          <span class="kind-badge" [class.extra]="!!route.service_date">{{ getKindLabel(route) }}</span>
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="company">
@@ -43,6 +56,11 @@
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
+    @if (routes.length === 0) {
+      <p class="empty-state">
+        {{ kindFilter === 'extra' ? 'Nenhuma rota avulsa.' : kindFilter === 'fixed' ? 'Nenhuma rota fixa.' : 'Nenhuma rota cadastrada.' }}
+      </p>
+    }
   </div>
 
   <mat-paginator

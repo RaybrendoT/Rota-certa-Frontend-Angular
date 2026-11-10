@@ -1,0 +1,28 @@
+.route-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kind-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.12);
+
+  &.extra {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.16);
+  }
+}
+
+.empty-state {
+  margin: 16px;
+  color: var(--mat-sys-on-surface-variant, #64748b);
+}
