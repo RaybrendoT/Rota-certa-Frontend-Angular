@@ -1,10 +1,14 @@
 import { Component, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -20,16 +24,32 @@ import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
 
+/** Tipo de acesso no filtro: o tipo da pessoa (motorista) ou o perfil da conta (gestor, gerente). */
+export type AccessFilter = '' | 'DRIVER' | 'EMPLOYEE' | 'MANAGER' | 'GERENTE';
+export type StatusFilter = 'all' | 'active' | 'inactive';
+
+interface EmployeeFilters {
+  access: AccessFilter;
+  status: StatusFilter;
+  search: string;
+}
+
+const EMPTY_FILTERS: EmployeeFilters = { access: '', status: 'all', search: '' };
+
 @Component({
   selector: 'app-employee-list',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterLink,
     MatTableModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatTabsModule,
@@ -59,6 +79,24 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   overviewError: string | null = null;
   pageIndex = 0;
   pageSize = 10;
+
+  readonly accessOptions: { value: AccessFilter; label: string }[] = [
+    { value: '', label: 'Todos' },
+    { value: 'DRIVER', label: 'Motorista' },
+    { value: 'EMPLOYEE', label: 'Funcionário' },
+    { value: 'MANAGER', label: 'Gestor' },
+    { value: 'GERENTE', label: 'Gerente' },
+  ];
+  readonly statusOptions: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: 'Todos' },
+    { value: 'active', label: 'Ativo' },
+    { value: 'inactive', label: 'Inativo' },
+  ];
+  /** O que está nos campos do filtro; só vale para a lista depois de "Aplicar" (ou Enter na busca). */
+  filters: EmployeeFilters = { ...EMPTY_FILTERS };
+  /** Filtros da lista exibida (vão para a API em cada página). */
+  private applied: EmployeeFilters = { ...EMPTY_FILTERS };
+  loading = false;
   pageSizeOptions = [5, 10, 25, 50];
 
   private destroy$ = new Subject<void>();
@@ -77,15 +115,23 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
   }
 
   loadEmployees(pageIndex: number = this.pageIndex, pageSize: number = this.pageSize): void {
-    this.employeeService.getAll({ page: pageIndex + 1, page_size: pageSize }).subscribe({
+    this.loading = true;
+    this.employeeService.getAll({
+      page: pageIndex + 1,
+      page_size: pageSize,
+      access: this.applied.access,
+      status: this.applied.status,
+      search: this.applied.search.trim(),
+    }).subscribe({
       next: (response) => {
-        console.log('Resposta da API:', response); // ← útil para debug
+        this.loading = false;
         const items = this.getEmployeesFromResponse(response);
         this.employees = items;
         this.totalCount = this.getTotalCountFromResponse(response, items.length);
       },
       error: (err) => {
         console.error('Erro ao carregar funcionários:', err);
+        this.loading = false;
         this.totalCount = 0;
         this.employees = [];
       }
@@ -94,6 +140,32 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
 
   onPageChange(event: PageEvent): void {
     this.pageChange$.next(event);
+  }
+
+  /** Aplica os filtros escolhidos e volta para a primeira página. */
+  applyFilters(): void {
+    this.applied = { ...this.filters, search: this.filters.search.trim() };
+    this.pageIndex = 0;
+    this.loadEmployees(0, this.pageSize);
+  }
+
+  clearFilters(): void {
+    this.filters = { ...EMPTY_FILTERS };
+    this.applyFilters();
+  }
+
+  get hasFilters(): boolean {
+    const { access, status, search } = this.applied;
+    return !!access || status !== EMPTY_FILTERS.status || !!search;
+  }
+
+  /** Os campos mudaram e ainda não foram aplicados. */
+  get filtersPending(): boolean {
+    return (
+      this.filters.access !== this.applied.access ||
+      this.filters.status !== this.applied.status ||
+      this.filters.search.trim() !== this.applied.search
+    );
   }
 
 

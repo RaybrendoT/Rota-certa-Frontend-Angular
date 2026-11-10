@@ -7,6 +7,44 @@
       </button>
     </div>
 
+  <!-- Filtros: só valem depois de Aplicar (ou Enter na busca). -->
+  <form class="filters" role="search" aria-label="Filtrar funcionários" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-access">
+      <mat-label>Tipo de acesso</mat-label>
+      <mat-select name="access" [(ngModel)]="filters.access">
+        @for (option of accessOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-status">
+      <mat-label>Status</mat-label>
+      <mat-select name="status" [(ngModel)]="filters.status">
+        @for (option of statusOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-search">
+      <mat-label>Buscar</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput name="search" [(ngModel)]="filters.search" placeholder="Nome ou matrícula" autocomplete="off">
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-stroked-button type="button" (click)="clearFilters()" [disabled]="!hasFilters && !filtersPending">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
+      <button mat-flat-button color="primary" type="submit">
+        <mat-icon>search</mat-icon>
+        Aplicar
+      </button>
+    </div>
+  </form>
+
   <div class="table-wrapper">
     <table mat-table [dataSource]="employees" class="list-table">
 
@@ -64,6 +102,17 @@
       </td>
     </ng-container>
 
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
+          @if (loading) {
+            Carregando…
+          } @else if (hasFilters) {
+            Nenhum funcionário com esses filtros. <button mat-button type="button" (click)="clearFilters()">Limpar filtros</button>
+          } @else {
+            Nenhum funcionário cadastrado.
+          }
+        </td>
+      </tr>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"
           class="clickable-row" [class.selected]="row.id === selected?.id"
