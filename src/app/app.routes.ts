@@ -102,17 +102,8 @@ export const routes: Routes = [
             .then(c => c.LiveMapPageComponent),
         data: { page: 'Mapa ao vivo', section: 'Monitoramento' }
       },
-      {
-        path: 'configuracoes',
-        loadComponent: () =>
-          import('./features/report/components/report-maintenance/report-maintenance.component')
-            .then(c => c.ReportMaintenanceComponent),
-        data: {
-          page: 'Configurações', section: 'Config',
-          title: 'Configurações em manutenção',
-          description: 'A área de configurações ainda não está disponível.'
-        }
-      },
+      // A tela de configurações (em manutenção) saiu do menu; links antigos voltam ao início.
+      { path: 'configuracoes', redirectTo: 'home', pathMatch: 'full' },
       {
         path: "home",
         loadComponent: () => import("./layout/home/home.component").then(c => c.HomeComponent),

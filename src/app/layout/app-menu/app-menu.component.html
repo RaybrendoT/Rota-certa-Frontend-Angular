@@ -108,22 +108,17 @@
         </div>
       }
   
-      <div class="menu-section">
-        <div class="menu-title">CONFIG</div>
-        <a routerLink="/configuracoes" class="menu-item" routerLinkActive="active"
-           [matTooltip]="collapsed() ? 'Configurações' : ''" matTooltipPosition="right">
-          <mat-icon>settings</mat-icon>
-          <span class="menu-label">Configurações</span>
-        </a>
-        @if (auth.isGerente()) {
+      @if (auth.isGerente()) {
+        <div class="menu-section">
+          <div class="menu-title">CONFIG</div>
           <a [href]="adminUrl" target="_blank" rel="noopener" class="menu-item"
              [matTooltip]="collapsed() ? 'Administração' : ''" matTooltipPosition="right">
             <mat-icon>admin_panel_settings</mat-icon>
             <span class="menu-label">Administração</span>
             <mat-icon class="menu-external">open_in_new</mat-icon>
           </a>
-        }
-      </div>
+        </div>
+      }
   
     </nav>
   </aside>
