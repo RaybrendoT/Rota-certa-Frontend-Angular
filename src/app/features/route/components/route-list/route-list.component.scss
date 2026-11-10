@@ -6,23 +6,54 @@
   gap: 12px;
 }
 
+/* Filtro Todas / Fixas / Avulsas: cores do tema (claro e escuro), com o selecionado bem marcado. */
+.kind-filter {
+  border: 1px solid var(--rc-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--rc-surface);
+
+  ::ng-deep .mat-button-toggle {
+    background: transparent;
+    color: var(--rc-text-muted);
+    border-left: 1px solid var(--rc-border);
+  }
+
+  ::ng-deep .mat-button-toggle:first-child {
+    border-left: none;
+  }
+
+  ::ng-deep .mat-button-toggle .mat-button-toggle-label-content {
+    line-height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  ::ng-deep .mat-button-toggle-checked {
+    background: var(--rc-info-bg);
+    color: var(--rc-info-text);
+    font-weight: 600;
+  }
+}
+
 .kind-badge {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
-  color: #1d4ed8;
-  background: rgba(37, 99, 235, 0.12);
+  color: var(--rc-info-text);
+  background: var(--rc-info-bg);
 
   &.extra {
-    color: #b45309;
-    background: rgba(245, 158, 11, 0.16);
+    color: var(--rc-warning-text);
+    background: var(--rc-warning-bg);
   }
 }
 
 .empty-state {
   margin: 16px;
-  color: var(--mat-sys-on-surface-variant, #64748b);
+  color: var(--rc-text-muted);
 }
