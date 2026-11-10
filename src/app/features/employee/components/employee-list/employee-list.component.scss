@@ -327,3 +327,36 @@
     margin-top: 4px;
   }
 }
+
+// ---------------------------------------------------------------- filtros
+
+.filters {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 16px 16px;
+
+  .filter-access {
+    flex: 0 1 200px;
+  }
+
+  .filter-status {
+    flex: 0 1 150px;
+  }
+
+  .filter-search {
+    flex: 1 1 260px;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-row {
+  color: var(--rc-text-muted);
+  padding: 24px 16px;
+  text-align: center;
+}
