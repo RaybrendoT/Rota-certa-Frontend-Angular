@@ -3,6 +3,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
@@ -10,7 +11,7 @@ import { Company, CompanyListResponse } from '../../../company/models/company';
 import { CompanyService } from '../../../company/service/company.service';
 import { Vehicle, VehicleListResponse } from '../../../vehicle/models/vehicle';
 import { VehicleService } from '../../../vehicle/service/vehicle.service';
-import { Route, RouteListResponse } from '../../models/route';
+import { Route, RouteKindFilter, RouteListResponse } from '../../models/route';
 import { RouteService } from '../../service/route.service';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
@@ -18,7 +19,7 @@ import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared
 @Component({
   selector: 'app-route-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatPaginatorModule, MatTableModule],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatIconModule, MatPaginatorModule, MatTableModule],
   templateUrl: './route-list.component.html',
   styleUrl: './route-list.component.scss'
 })
@@ -29,7 +30,8 @@ export class RouteListComponent implements OnInit, OnDestroy {
 
   routes: Route[] = [];
   totalCount = 0;
-  displayedColumns: string[] = ['name', 'company', 'vehicle', 'is_active', 'actions'];
+  displayedColumns: string[] = ['name', 'kind', 'company', 'vehicle', 'is_active', 'actions'];
+  kindFilter: RouteKindFilter = 'all';
   pageIndex = 0;
   pageSize = 10;
   pageSizeOptions = [5, 10, 25, 50];
@@ -76,7 +78,11 @@ export class RouteListComponent implements OnInit, OnDestroy {
   }
 
   loadRoutes(pageIndex: number = this.pageIndex, pageSize: number = this.pageSize): void {
-    this.routeService.getAll({ page: pageIndex + 1, page_size: pageSize }).subscribe({
+    const params: Record<string, string | number> = { page: pageIndex + 1, page_size: pageSize };
+    if (this.kindFilter !== 'all') {
+      params['kind'] = this.kindFilter;
+    }
+    this.routeService.getAll(params).subscribe({
       next: (response) => {
         const items = this.getRoutesFromResponse(response);
         this.routes = items;
@@ -88,6 +94,21 @@ export class RouteListComponent implements OnInit, OnDestroy {
         this.routes = [];
       }
     });
+  }
+
+  onKindChange(kind: RouteKindFilter): void {
+    this.kindFilter = kind;
+    this.pageIndex = 0;
+    this.loadRoutes(0, this.pageSize);
+  }
+
+  /** "Fixa" para rota diária; "Avulsa · 10/11/2026" para rota montada para um dia. */
+  getKindLabel(route: Route): string {
+    if (!route.service_date) {
+      return 'Fixa (diária)';
+    }
+    const [year, month, day] = route.service_date.split('-');
+    return `Avulsa · ${day}/${month}/${year}`;
   }
 
   onPageChange(event: PageEvent): void {
@@ -107,7 +128,10 @@ export class RouteListComponent implements OnInit, OnDestroy {
     return this.companyNamesById.get(companyId) ?? String(companyId);
   }
 
-  getVehicleLabel(vehicleId: number): string {
+  getVehicleLabel(vehicleId: number | null): string {
+    if (vehicleId == null) {
+      return 'Sem veículo';
+    }
     return this.vehiclePlatesById.get(vehicleId) ?? String(vehicleId);
   }
 
