@@ -7,8 +7,6 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
-import { Company, CompanyListResponse } from '../../../company/models/company';
-import { CompanyService } from '../../../company/service/company.service';
 import { Vehicle, VehicleListResponse } from '../../../vehicle/models/vehicle';
 import { VehicleService } from '../../../vehicle/service/vehicle.service';
 import { Route, RouteKindFilter, RouteListResponse } from '../../models/route';
@@ -25,24 +23,22 @@ import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared
 })
 export class RouteListComponent implements OnInit, OnDestroy {
   private routeService = inject(RouteService);
-  private companyService = inject(CompanyService);
   private vehicleService = inject(VehicleService);
 
   routes: Route[] = [];
   totalCount = 0;
-  displayedColumns: string[] = ['name', 'kind', 'company', 'vehicle', 'is_active', 'actions'];
+  // Sem coluna de empresa: o gestor só vê as rotas da própria empresa.
+  displayedColumns: string[] = ['name', 'kind', 'vehicle', 'is_active', 'actions'];
   kindFilter: RouteKindFilter = 'all';
   pageIndex = 0;
   pageSize = 10;
   pageSizeOptions = [5, 10, 25, 50];
-  private companyNamesById = new Map<number, string>();
   private vehiclePlatesById = new Map<number, string>();
 
   private destroy$ = new Subject<void>();
   private pageChange$ = new Subject<PageEvent>();
 
   ngOnInit(): void {
-    this.loadCompanies();
     this.loadVehicles();
     this.loadRoutes();
 
@@ -53,17 +49,6 @@ export class RouteListComponent implements OnInit, OnDestroy {
         this.pageSize = event.pageSize;
         this.loadRoutes(this.pageIndex, this.pageSize);
       });
-  }
-
-  loadCompanies(): void {
-    this.companyService.options().subscribe({
-      next: (response) => {
-        this.companyNamesById = new Map(
-          this.getCompaniesFromResponse(response).map(company => [company.id, company.name])
-        );
-      },
-      error: (err) => console.error('Erro ao carregar empresas:', err)
-    });
   }
 
   loadVehicles(): void {
@@ -124,10 +109,6 @@ export class RouteListComponent implements OnInit, OnDestroy {
     }
   }
 
-  getCompanyLabel(companyId: number): string {
-    return this.companyNamesById.get(companyId) ?? String(companyId);
-  }
-
   getVehicleLabel(vehicleId: number | null): string {
     if (vehicleId == null) {
       return 'Sem veículo';
@@ -137,10 +118,6 @@ export class RouteListComponent implements OnInit, OnDestroy {
 
   private getRoutesFromResponse(response: RouteListResponse | Route[]): Route[] {
     return extractPaginatedItems<Route>(response);
-  }
-
-  private getCompaniesFromResponse(response: CompanyListResponse | Company[]): Company[] {
-    return extractPaginatedItems<Company>(response);
   }
 
   private getVehiclesFromResponse(response: VehicleListResponse | Vehicle[]): Vehicle[] {
