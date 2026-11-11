@@ -5,14 +5,17 @@
 
   <mat-card-content>
     <form [formGroup]="form" class="form-grid">
-      <mat-form-field>
-        <mat-label>Empresa</mat-label>
-        <mat-select formControlName="company" required>
-          @for (company of companyList; track company.id) {
-            <mat-option [value]="company.id">{{ company.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <!-- O gestor só tem a própria empresa (já escolhida sozinha): o campo só aparece com mais de uma. -->
+      @if (companyList.length > 1) {
+        <mat-form-field>
+          <mat-label>Empresa</mat-label>
+          <mat-select formControlName="company" required>
+            @for (company of companyList; track company.id) {
+              <mat-option [value]="company.id">{{ company.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
 
       <mat-form-field>
         <mat-label>Motorista</mat-label>

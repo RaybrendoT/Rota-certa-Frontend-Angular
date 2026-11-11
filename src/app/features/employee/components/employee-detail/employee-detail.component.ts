@@ -43,7 +43,6 @@ export class EmployeeDetailComponent implements OnInit {
    * O gestor só cadastra/edita gente da própria empresa (o backend rejeita qualquer outra),
    * então a empresa nem é um campo editável aqui: é sempre a de quem está logado.
    */
-  readonly companyName = this.auth.person()?.company_name ?? '';
   private readonly companyId = this.auth.person()?.company_id ?? null;
 
   ngOnInit(): void {
