@@ -1,0 +1,108 @@
+<h2 mat-dialog-title>Importar funcionários</h2>
+
+<mat-dialog-content class="import-content">
+  @switch (step()) {
+    @case ('pick') {
+      <p class="intro">
+        Envie um CSV com uma linha por pessoa: <strong>COLABORADOR</strong> (matrícula e endereço de casa),
+        <strong>MOTORISTA</strong> (CNH e veículo) e, se quiser, <strong>EMPRESA</strong> com o endereço da sede.
+        Antes de gravar, o sistema confere o arquivo inteiro e mostra o que será criado.
+      </p>
+
+      <button mat-button type="button" class="template" (click)="downloadTemplate()">
+        <mat-icon>download</mat-icon>
+        Baixar modelo do CSV
+      </button>
+
+      @if (auth.isGerente()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="company">
+          <mat-label>Empresa</mat-label>
+          <mat-select id="import-company" [(ngModel)]="companyId" name="company">
+            @for (company of companyOptions(); track company.id) {
+              <mat-option [value]="company.id">{{ company.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <input #fileInput id="import-file" type="file" accept=".csv,text/csv" hidden (change)="onFileSelected($event)">
+      <div class="file-row">
+        <button mat-stroked-button type="button" (click)="fileInput.click()" [disabled]="busy()">
+          <mat-icon>upload_file</mat-icon>
+          {{ file() ? 'Trocar arquivo' : 'Escolher arquivo' }}
+        </button>
+        <span class="file-name">{{ file()?.name || 'Nenhum arquivo escolhido' }}</span>
+      </div>
+    }
+
+    @case ('preview') {
+      @if (result(); as r) {
+        <p class="intro">O arquivo está correto. Confira o que será criado em <strong>{{ r.company.name }}</strong>:</p>
+        <dl class="summary">
+          <div><dt>Colaboradores</dt><dd>{{ r.created.employees }}</dd></div>
+          <div><dt>Motoristas</dt><dd>{{ r.created.drivers }}</dd></div>
+          @if (r.created.managers) {
+            <div><dt>Gestores</dt><dd>{{ r.created.managers }}</dd></div>
+          }
+          <div><dt>Veículos</dt><dd>{{ r.vehicles }}</dd></div>
+          <div><dt>Já cadastrados (serão pulados)</dt><dd>{{ r.skipped }}</dd></div>
+        </dl>
+        @if (r.company_address) {
+          <p class="note">O endereço da sede também será atualizado.</p>
+        }
+        <p class="note">
+          Login: <code>matrícula&#64;{{ r.company.email_domain }}</code> (motorista: CNH).
+          Senha inicial: matrícula (ou CNH) + 4 últimos dígitos do telefone, com troca no primeiro acesso.
+        </p>
+      }
+    }
+
+    @case ('done') {
+      @if (result(); as r) {
+        <div class="done">
+          <mat-icon>check_circle</mat-icon>
+          <p>
+            <strong>{{ total }} pessoas importadas</strong> em {{ r.company.name }}
+            ({{ r.created.employees }} colaboradores, {{ r.created.drivers }} motoristas{{ r.created.managers ? ', ' + r.created.managers + ' gestores' : '' }}).
+            @if (r.skipped) { {{ r.skipped }} já estavam cadastradas e foram puladas. }
+          </p>
+        </div>
+      }
+    }
+  }
+
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Processando o arquivo"></mat-progress-bar>
+  }
+
+  @if (errors().length) {
+    <div class="errors" role="alert">
+      <p><strong>Nada foi importado.</strong> Corrija o arquivo e envie de novo:</p>
+      <ul>
+        @for (error of errors(); track $index) {
+          <li>{{ error }}</li>
+        }
+      </ul>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @switch (step()) {
+    @case ('pick') {
+      <button mat-button type="button" (click)="close()">Cancelar</button>
+      <button mat-raised-button color="primary" type="button" (click)="check()" [disabled]="!file() || busy()">
+        Conferir arquivo
+      </button>
+    }
+    @case ('preview') {
+      <button mat-button type="button" (click)="backToPick()" [disabled]="busy()">Voltar</button>
+      <button mat-raised-button color="primary" type="button" (click)="confirm()" [disabled]="busy() || total === 0">
+        Importar {{ total }} pessoas
+      </button>
+    }
+    @case ('done') {
+      <button mat-raised-button color="primary" type="button" (click)="close()">Fechar</button>
+    }
+  }
+</mat-dialog-actions>

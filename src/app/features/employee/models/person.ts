@@ -81,3 +81,13 @@ export interface HomeAddress {
   reviewed_at: string | null;
   created_at: string;
 }
+
+/** Resposta de POST people/import/ (prévia ou importação confirmada). */
+export interface ImportResult {
+  confirmed: boolean;
+  company: { id: number; name: string; email_domain: string };
+  created: { employees: number; drivers: number; managers: number };
+  vehicles: number;
+  skipped: number;
+  company_address: boolean;
+}
