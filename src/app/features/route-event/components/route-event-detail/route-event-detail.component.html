@@ -1,53 +1,75 @@
 <mat-card class="page-card form-card">
   <mat-card-header>
-    <mat-card-subtitle>Registro manual de uma ocorrência na rota.</mat-card-subtitle>
+    <mat-card-subtitle>
+      @if (isEdit && loaded) {
+        {{ loaded.source_label }}@if (loaded.reported_by_name) { · registrada por {{ loaded.reported_by_name }}} · {{ loaded.status_label }}
+      } @else {
+        Registre um atraso ou incidente avisado por telefone ou percebido na operação.
+      }
+    </mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
     <form [formGroup]="form" class="form-grid">
-      <mat-form-field>
+      <mat-form-field class="span-2">
         <mat-label>Rota</mat-label>
         <mat-select formControlName="route" required>
           @for (route of routeList; track route.id) {
-            <mat-option [value]="route.id">{{ route.name }}</mat-option>
+            <mat-option [value]="route.id">{{ routeLabel(route) }}</mat-option>
+          }
+        </mat-select>
+        <mat-error>Escolha a rota.</mat-error>
+      </mat-form-field>
+
+      <fieldset class="span-2 type-field">
+        <legend>Tipo *</legend>
+        <mat-button-toggle-group formControlName="event_type" hideSingleSelectionIndicator aria-label="Tipo de ocorrência">
+          <mat-button-toggle value="delay"><mat-icon>schedule</mat-icon> Atraso</mat-button-toggle>
+          <mat-button-toggle value="incident"><mat-icon>report</mat-icon> Incidente</mat-button-toggle>
+        </mat-button-toggle-group>
+      </fieldset>
+
+      <mat-form-field>
+        <mat-label>Categoria</mat-label>
+        <mat-select formControlName="category">
+          <mat-option value="">Não informada</mat-option>
+          @for (category of categories; track category.value) {
+            <mat-option [value]="category.value">{{ category.label }}</mat-option>
+          }
+          @if (loaded?.category === 'schedule') {
+            <mat-option value="schedule">Horário (detectado pelo sistema)</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
-      <mat-form-field>
-        <mat-label>Tipo</mat-label>
-        <mat-select formControlName="event_type">
-          <mat-option value="departure">Saída</mat-option>
-          <mat-option value="stop">Parada</mat-option>
-          <mat-option value="delay">Atraso</mat-option>
-          <mat-option value="arrival">Chegada</mat-option>
-        </mat-select>
-      </mat-form-field>
+      @if (eventType() === 'delay') {
+        <mat-form-field>
+          <mat-label>Atraso estimado (minutos)</mat-label>
+          <input matInput type="number" min="1" max="600" formControlName="delay_minutes">
+          <mat-error>Entre 1 e 600 minutos.</mat-error>
+        </mat-form-field>
+      }
 
       <mat-form-field class="span-2">
         <mat-label>Descrição</mat-label>
-        <input matInput formControlName="description" required>
+        <textarea matInput rows="3" formControlName="description" maxlength="1000" required
+                  placeholder="Ex.: pneu furado na Av. Torquato Tapajós, ônibus reserva a caminho"></textarea>
+        <mat-error>Descreva o que aconteceu.</mat-error>
       </mat-form-field>
 
-      <mat-form-field>
-        <mat-label>Latitude</mat-label>
-        <input matInput formControlName="latitude" required>
-      </mat-form-field>
-
-      <mat-form-field>
-        <mat-label>Longitude</mat-label>
-        <input matInput formControlName="longitude" required>
-      </mat-form-field>
-
-      <mat-checkbox formControlName="is_active">Ativo</mat-checkbox>
+      @if (!isEdit) {
+        <mat-checkbox formControlName="notify_passengers" class="span-2">
+          Avisar os passageiros da rota no app
+        </mat-checkbox>
+      }
     </form>
   </mat-card-content>
 
   <mat-card-actions class="form-actions">
     <span class="form-hint">* campos obrigatórios</span>
-    <button mat-button (click)="cancel()">Cancelar</button>
-    <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
-      {{ isEdit ? 'Atualizar' : 'Salvar' }}
+    <button mat-button type="button" (click)="cancel()">Cancelar</button>
+    <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="form.invalid || saving">
+      {{ isEdit ? 'Salvar' : 'Registrar' }}
     </button>
   </mat-card-actions>
 </mat-card>

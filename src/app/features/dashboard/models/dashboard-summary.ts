@@ -15,7 +15,8 @@ export interface DashboardSummary {
     absent: number;
     pending: number;
   };
-  events: { delays: number; incidents: number };
+  /** Ocorrências do dia (motorista, gestor e sistema); `open` = ainda não resolvidas. */
+  events: { delays: number; incidents: number; open: number };
   occupancy: { seats: number; passengers: number; rate: number | null };
   punctuality: {
     finished: number;
@@ -55,8 +56,14 @@ export interface DashboardAlertItem {
   /** HH:MM no fuso da operação; em address_reviews, data/hora ISO do envio. */
   time: string | null;
   description?: string;
-  /** delays: 'reported' | 'overdue'; unassigned: 'no_vehicle' | 'no_driver'. */
+  /**
+   * delays: 'reported' (motorista ou gestor) ou, do sistema, 'not_started' | 'overdue' | 'late_arrival';
+   * unassigned: 'no_vehicle' | 'no_driver'.
+   */
   reason?: string;
+  /** incidents/delays: quem registrou ('driver' | 'manager' | 'system') e o status da ocorrência. */
+  source?: string;
+  status?: string;
 }
 
 /** `items` traz todos os itens do grupo; o painel mostra os primeiros e expande o resto. */

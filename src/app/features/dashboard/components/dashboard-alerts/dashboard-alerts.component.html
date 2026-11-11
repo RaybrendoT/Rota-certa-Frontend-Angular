@@ -22,7 +22,7 @@
           <ul>
             @for (item of visibleItems(group); track $index) {
               <li>
-                <a [routerLink]="itemLink(group, item)">
+                <a [routerLink]="itemLink(group, item)" [queryParams]="itemQuery(group, item)">
                   <strong>{{ itemTitle(group, item) }}</strong>
                   <span class="detail">{{ itemDetail(group, item) }}</span>
                   <mat-icon class="go">chevron_right</mat-icon>

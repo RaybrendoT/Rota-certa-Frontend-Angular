@@ -83,7 +83,16 @@ export class DashboardAlertsComponent {
 
   itemLink(group: DashboardAlertGroup, item: DashboardAlertItem): string[] {
     if (group.kind === 'address_reviews') return ['/enderecos'];
+    // Atraso ou incidente registrado: abre as ocorrências em aberto, onde dá para assumir e resolver.
+    if ((group.kind === 'delays' || group.kind === 'incidents') && item.id) return ['/eventos-rota'];
     return ['/rotas', String(item.route_id), 'editar'];
+  }
+
+  itemQuery(group: DashboardAlertGroup, item: DashboardAlertItem): Record<string, string> | null {
+    if ((group.kind === 'delays' || group.kind === 'incidents') && item.id) {
+      return { tipo: group.kind === 'delays' ? 'delay' : 'incident' };
+    }
+    return null;
   }
 
   itemTitle(group: DashboardAlertGroup, item: DashboardAlertItem): string {
@@ -95,9 +104,19 @@ export class DashboardAlertsComponent {
       case 'incidents':
         return [`às ${item.time}`, item.description].filter(Boolean).join(' · ');
       case 'delays':
-        return item.reason === 'overdue'
-          ? `turno das ${item.time}: passou do horário sem chegada registrada`
-          : [`atraso informado às ${item.time}`, item.description].filter(Boolean).join(' · ');
+        switch (item.reason) {
+          case 'overdue':
+            return `turno das ${item.time}: passou do horário sem chegada registrada`;
+          case 'not_started':
+            return `turno das ${item.time}: ${item.description || 'rota não iniciada no horário'}`;
+          case 'late_arrival':
+            return item.description || `turno das ${item.time}: chegou atrasada`;
+          default:
+            return [
+              `${item.source === 'manager' ? 'registrado pelo gestor' : 'informado pelo motorista'} às ${item.time}`,
+              item.description,
+            ].filter(Boolean).join(' · ');
+        }
       case 'unassigned':
         return [item.reason === 'no_vehicle' ? 'sem veículo' : 'veículo sem motorista', item.time ? `turno das ${item.time}` : 'rota avulsa']
           .join(' · ');

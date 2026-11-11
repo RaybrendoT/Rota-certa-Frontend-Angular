@@ -113,6 +113,18 @@
   gap: var(--rc-gap);
 }
 
+// Telas largas: os 6 cards numa linha só, um pouco mais compactos.
+@media (min-width: 1360px) {
+  .cards {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .cards .card {
+    padding: 16px;
+  }
+}
+
 .card {
   display: flex;
   flex-direction: column;

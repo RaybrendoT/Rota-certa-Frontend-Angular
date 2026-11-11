@@ -1,54 +1,158 @@
 <mat-card class="list-card">
   <div class="list-header">
+    <p class="intro">
+      Atrasos e incidentes enviados pelo motorista, registrados pelo gestor ou detectados pelo sistema pelo horário das rotas.
+    </p>
     <button mat-raised-button color="primary" routerLink="novo">
       <mat-icon>add</mat-icon>
-      Novo Evento
+      Registrar ocorrência
     </button>
-    @if (typeFilter.length) {
-      <span class="type-filter">
-        <mat-icon>filter_alt</mat-icon>
-        Mostrando só: {{ typeFilterLabel }}
-        <button mat-button (click)="clearTypeFilter()">Ver todos os eventos</button>
-      </span>
-    }
   </div>
+
+  <form class="filters" role="search" aria-label="Filtrar ocorrências" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-period">
+      <mat-label>Período</mat-label>
+      <mat-select name="period" [(ngModel)]="filters.period">
+        @for (option of periodOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-type">
+      <mat-label>Tipo</mat-label>
+      <mat-select name="type" [(ngModel)]="filters.type">
+        @for (option of typeOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-status">
+      <mat-label>Status</mat-label>
+      <mat-select name="status" [(ngModel)]="filters.status">
+        @for (option of statusOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-source">
+      <mat-label>Origem</mat-label>
+      <mat-select name="source" [(ngModel)]="filters.source">
+        @for (option of sourceOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-search">
+      <mat-label>Buscar</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput name="search" [(ngModel)]="filters.search" placeholder="Rota, motorista, placa ou descrição" autocomplete="off">
+    </mat-form-field>
+    <div class="filter-actions">
+      <button mat-stroked-button type="button" (click)="clearFilters()" [disabled]="!filtersChanged">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
+      <button mat-flat-button color="primary" type="submit">
+        <mat-icon>search</mat-icon>
+        Aplicar
+      </button>
+    </div>
+  </form>
 
   <div class="table-wrapper">
     <table mat-table [dataSource]="events" class="list-table">
-      <ng-container matColumnDef="route">
-        <th mat-header-cell *matHeaderCellDef>Rota</th>
-        <td mat-cell *matCellDef="let event">{{ getRouteLabel(event) }}</td>
+      <ng-container matColumnDef="when">
+        <th mat-header-cell *matHeaderCellDef>Quando</th>
+        <td mat-cell *matCellDef="let event" class="nowrap">
+          <strong>{{ event.timestamp | date:'HH:mm' }}</strong>
+          <span class="muted small">{{ event.timestamp | date:'dd/MM' }}</span>
+        </td>
       </ng-container>
 
-      <ng-container matColumnDef="event_type">
-        <th mat-header-cell *matHeaderCellDef>Tipo</th>
-        <td mat-cell *matCellDef="let event">{{ getEventTypeLabel(event.event_type) }}</td>
+      <ng-container matColumnDef="route">
+        <th mat-header-cell *matHeaderCellDef>Rota</th>
+        <td mat-cell *matCellDef="let event">
+          <div class="strong">{{ event.route_name }}</div>
+          @if (event.driver_name) { <div class="muted small">{{ event.driver_name }}</div> }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="occurrence">
+        <th mat-header-cell *matHeaderCellDef>Ocorrência</th>
+        <td mat-cell *matCellDef="let event">
+          <span class="type" [class.delay]="event.event_type === 'delay'" [class.incident]="event.event_type === 'incident'">
+            <mat-icon>{{ event.event_type === 'delay' ? 'schedule' : 'report' }}</mat-icon>{{ typeLabel(event) }}
+          </span>
+          @if (detailLabel(event)) { <div class="muted small">{{ detailLabel(event) }}</div> }
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="description">
         <th mat-header-cell *matHeaderCellDef>Descrição</th>
-        <td mat-cell *matCellDef="let event">{{ event.description }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="timestamp">
-        <th mat-header-cell *matHeaderCellDef>Data/Hora</th>
-        <td mat-cell *matCellDef="let event">{{ event.timestamp | date:'short' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Ações</th>
-        <td mat-cell *matCellDef="let event">
-          <button mat-icon-button [routerLink]="[event.id, 'editar']">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="deleteEvent(event.id!)">
-            <mat-icon>delete</mat-icon>
-          </button>
+        <td mat-cell *matCellDef="let event" class="description">
+          {{ event.description || '—' }}
+          @if (event.status === 'resolved' && event.resolution) {
+            <div class="resolution">
+              <mat-icon>check</mat-icon>
+              <span>{{ event.resolution }}@if (event.resolved_by_name) { — {{ event.resolved_by_name }} }</span>
+            </div>
+          }
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="source">
+        <th mat-header-cell *matHeaderCellDef>Origem</th>
+        <td mat-cell *matCellDef="let event" class="nowrap">
+          <span class="source" [matTooltip]="event.reported_by_name ? 'Registrada por ' + event.reported_by_name : ''">
+            <mat-icon>{{ sourceIcon(event.source) }}</mat-icon>{{ event.source_label }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let event" class="nowrap">
+          <span [class]="'status ' + event.status">{{ event.status_label }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-cell">Ações</th>
+        <td mat-cell *matCellDef="let event" class="actions-cell">
+          @if (event.status !== 'resolved') {
+            <button mat-stroked-button type="button" class="resolve" (click)="resolve(event)" [disabled]="busyId === event.id">
+              Resolver
+            </button>
+          }
+          <button mat-icon-button type="button" [matMenuTriggerFor]="more" [attr.aria-label]="'Mais ações para ' + event.route_name"
+                  [disabled]="busyId === event.id">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #more="matMenu">
+            @if (event.status === 'open') {
+              <button mat-menu-item type="button" (click)="start(event)"><mat-icon>pan_tool</mat-icon>Assumir (em andamento)</button>
+            }
+            @if (event.status === 'resolved') {
+              <button mat-menu-item type="button" (click)="reopen(event)"><mat-icon>undo</mat-icon>Reabrir</button>
+            }
+            <a mat-menu-item [routerLink]="[event.id, 'editar']"><mat-icon>edit</mat-icon>Editar detalhes</a>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
+          @if (loading) {
+            Carregando…
+          } @else if (filtersChanged) {
+            Nenhuma ocorrência com esses filtros. <button mat-button type="button" (click)="clearFilters()">Limpar filtros</button>
+          } @else {
+            Nenhuma ocorrência em aberto nos últimos 7 dias.
+          }
+        </td>
+      </tr>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.resolved-row]="row.status === 'resolved'"></tr>
     </table>
   </div>
 
