@@ -6,37 +6,96 @@
     </button>
   </div>
 
+  <!-- Filtros: só valem depois de Aplicar. -->
+  <form class="filters" role="search" aria-label="Filtrar horários" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-status">
+      <mat-label>Status</mat-label>
+      <mat-select name="status" [(ngModel)]="filters.status">
+        @for (option of statusOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-day">
+      <mat-label>Dia da semana</mat-label>
+      <mat-select name="weekday" [(ngModel)]="filters.weekday">
+        <mat-option value="">Todos</mat-option>
+        @for (day of weekdays; track day.code) {
+          <mat-option [value]="day.code">{{ day.long }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-period">
+      <mat-label>Período</mat-label>
+      <mat-select name="period" [(ngModel)]="filters.period">
+        @for (option of periodOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-stroked-button type="button" (click)="clearFilters()" [disabled]="!hasFilters && !filtersPending">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
+      <button mat-flat-button color="primary" type="submit">
+        <mat-icon>search</mat-icon>
+        Aplicar
+      </button>
+    </div>
+  </form>
+
   <div class="table-wrapper">
     <table mat-table [dataSource]="schedules" class="list-table">
       <ng-container matColumnDef="weekdays">
         <th mat-header-cell *matHeaderCellDef>Dias</th>
-        <td mat-cell *matCellDef="let schedule">{{ getWeekdaysLabel(schedule.weekdays) }}</td>
+        <td mat-cell *matCellDef="let schedule" [matTooltip]="getWeekdaysTooltip(schedule.weekdays)">
+          {{ getWeekdaysLabel(schedule.weekdays) }}
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="time">
-        <th mat-header-cell *matHeaderCellDef>Chegada</th>
-        <td mat-cell *matCellDef="let schedule">{{ getTimeLabel(schedule.time) }}</td>
+        <th mat-header-cell *matHeaderCellDef class="col-time">Chegada</th>
+        <td mat-cell *matCellDef="let schedule" class="col-time">{{ getTimeLabel(schedule.time) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="is_active">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let schedule">{{ schedule.is_active ? 'Ativo' : 'Inativo' }}</td>
+        <th mat-header-cell *matHeaderCellDef class="col-status">Status</th>
+        <td mat-cell *matCellDef="let schedule" class="col-status">
+          <span class="status" [class.active]="schedule.is_active" [class.inactive]="!schedule.is_active">
+            {{ schedule.is_active ? 'Ativo' : 'Inativo' }}
+          </span>
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Ações</th>
-        <td mat-cell *matCellDef="let schedule">
-          <button mat-icon-button [routerLink]="[schedule.id, 'editar']">
+        <th mat-header-cell *matHeaderCellDef class="actions-cell">Ações</th>
+        <td mat-cell *matCellDef="let schedule" class="actions-cell">
+          <button mat-icon-button [routerLink]="[schedule.id, 'editar']" matTooltip="Editar" aria-label="Editar horário">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button color="warn" (click)="deleteSchedule(schedule.id!)">
+          <button mat-icon-button color="warn" (click)="deleteSchedule(schedule.id!)" matTooltip="Excluir" aria-label="Excluir horário">
             <mat-icon>delete</mat-icon>
           </button>
         </td>
       </ng-container>
 
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
+          @if (loading) {
+            Carregando…
+          } @else if (hasFilters) {
+            Nenhum horário com esses filtros. <button mat-button type="button" (click)="clearFilters()">Limpar filtros</button>
+          } @else {
+            Nenhum horário cadastrado.
+          }
+        </td>
+      </tr>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.inactive-row]="!row.is_active"></tr>
     </table>
   </div>
 
