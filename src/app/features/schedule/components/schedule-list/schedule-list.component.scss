@@ -1,0 +1,80 @@
+// Dias ocupa o espaço que sobra; as outras colunas ficam justas e Ações encosta à direita.
+
+.col-time {
+  font-variant-numeric: tabular-nums;
+  width: 140px;
+}
+
+.col-status {
+  width: 140px;
+}
+
+.actions-cell {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.status {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &::before {
+    background: currentColor;
+    border-radius: 50%;
+    content: '';
+    display: inline-block;
+    height: 8px;
+    margin-right: 6px;
+    vertical-align: 1px;
+    width: 8px;
+  }
+
+  &.active {
+    color: var(--rc-success-text);
+  }
+
+  &.inactive {
+    color: var(--rc-text-muted);
+  }
+}
+
+// ---------------------------------------------------------------- filtros
+
+.filters {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 16px 16px;
+
+  .filter-status {
+    flex: 0 1 150px;
+  }
+
+  .filter-day {
+    flex: 0 1 200px;
+  }
+
+  .filter-period {
+    flex: 0 1 230px;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.empty-row {
+  color: var(--rc-text-muted);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+// Turno inativo: linha esmaecida (o status em cinza já diz o motivo).
+.inactive-row td:not(.actions-cell) {
+  color: var(--rc-text-muted);
+}
