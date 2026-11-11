@@ -1,1 +1,45 @@
 /* Layout e cores vêm do padrão global em src/styles.scss (.page-card, .form-card, .form-grid, .form-actions). */
+
+.weekdays {
+  border: 0;
+  margin: 0 0 8px;
+  padding: 0;
+
+  legend {
+    color: var(--rc-text-2);
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+}
+
+.weekday-toggles {
+  flex-wrap: wrap;
+
+  .mat-button-toggle {
+    min-width: 56px;
+  }
+
+  .mat-button-toggle-checked {
+    background: var(--rc-primary);
+    color: var(--rc-surface);
+  }
+}
+
+.weekday-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+
+  .preset-active {
+    background: var(--rc-info-bg);
+    border-color: var(--rc-primary);
+  }
+}
+
+.weekday-summary {
+  color: var(--rc-text-muted);
+  font-size: 0.8125rem;
+  margin: 8px 0 0;
+}
