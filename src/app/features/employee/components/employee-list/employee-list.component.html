@@ -1,6 +1,10 @@
 <mat-card class="list-card">
     <div class="list-header">
 
+      <button mat-stroked-button type="button" (click)="openImport()">
+        <mat-icon>upload_file</mat-icon>
+        Importar CSV
+      </button>
       <button mat-raised-button color="primary" routerLink="novo">
         <mat-icon>add</mat-icon>
         Novo Funcionário

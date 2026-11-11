@@ -20,6 +20,7 @@ import { HomeAddress, Person, PersonOverview, PersonRoute } from '../../models/p
 import { ROLE_LABELS } from '../../../../core/models/auth.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { DialogComponent } from '../../../../shared/dialog/dialog.component';
+import { EmployeeImportComponent } from '../employee-import/employee-import.component';
 import { extractErrorMessage } from '../../../../shared/utils/http-error.util';
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
@@ -111,6 +112,20 @@ export class EmployeeListComponent implements OnInit, OnDestroy {
         this.pageIndex = event.pageIndex;
         this.pageSize = event.pageSize;
         this.loadEmployees(this.pageIndex, this.pageSize);
+      });
+  }
+
+  /** Janela de importação por CSV; ao fechar depois de importar, recarrega a lista do início. */
+  openImport(): void {
+    this.dialog
+      .open(EmployeeImportComponent, { width: '600px', maxWidth: '95vw', autoFocus: false })
+      .afterClosed()
+      .subscribe((imported) => {
+        if (imported) {
+          this.pageIndex = 0;
+          this.loadEmployees(0, this.pageSize);
+          this.snackBar.open('Funcionários importados.', 'OK', { duration: 4000 });
+        }
       });
   }
 
