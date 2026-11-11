@@ -1,1 +1,27 @@
 /* Layout e cores vêm do padrão global em src/styles.scss (.page-card, .form-card, .form-grid, .form-actions). */
+
+.type-field {
+  border: 0;
+  margin: 0 0 8px;
+  padding: 0;
+
+  legend {
+    color: var(--rc-text-2);
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    margin-right: 4px;
+    vertical-align: -3px;
+    width: 18px;
+  }
+
+  .mat-button-toggle-checked {
+    background: var(--rc-primary);
+    color: var(--rc-surface);
+  }
+}
