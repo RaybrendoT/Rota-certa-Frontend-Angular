@@ -8,19 +8,14 @@
 
   <div class="table-wrapper">
     <table mat-table [dataSource]="schedules" class="list-table">
-      <ng-container matColumnDef="company">
-        <th mat-header-cell *matHeaderCellDef>Empresa</th>
-        <td mat-cell *matCellDef="let schedule">{{ getCompanyLabel(schedule.company) }}</td>
-      </ng-container>
-
       <ng-container matColumnDef="weekdays">
         <th mat-header-cell *matHeaderCellDef>Dias</th>
         <td mat-cell *matCellDef="let schedule">{{ getWeekdaysLabel(schedule.weekdays) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="time">
-        <th mat-header-cell *matHeaderCellDef>Hora</th>
-        <td mat-cell *matCellDef="let schedule">{{ schedule.time }}</td>
+        <th mat-header-cell *matHeaderCellDef>Chegada</th>
+        <td mat-cell *matCellDef="let schedule">{{ getTimeLabel(schedule.time) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="is_active">

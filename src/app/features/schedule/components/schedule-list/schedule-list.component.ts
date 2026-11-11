@@ -6,9 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
-import { Company, CompanyListResponse } from '../../../company/models/company';
-import { CompanyService } from '../../../company/service/company.service';
 import { Schedule, ScheduleListResponse } from '../../models/schedule';
+import { formatWeekdays } from '../../models/weekdays';
 import { ScheduleService } from '../../service/schedule.service';
 import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared/utils/paginated-response.util';
 
@@ -21,30 +20,17 @@ import { extractPaginatedCount, extractPaginatedItems } from '../../../../shared
 })
 export class ScheduleListComponent implements OnInit {
   private scheduleService = inject(ScheduleService);
-  private companyService = inject(CompanyService);
 
   schedules: Schedule[] = [];
   totalCount = 0;
-  displayedColumns: string[] = ['company', 'weekdays', 'time', 'is_active', 'actions'];
+  // Sem coluna de empresa: o gestor só vê os turnos da própria empresa.
+  displayedColumns: string[] = ['weekdays', 'time', 'is_active', 'actions'];
   pageIndex = 0;
   pageSize = 10;
   pageSizeOptions = [5, 10, 25, 50];
-  private companyNamesById = new Map<number, string>();
 
   ngOnInit(): void {
-    this.loadCompanies();
     this.loadSchedules();
-  }
-
-  loadCompanies(): void {
-    this.companyService.options().subscribe({
-      next: (response) => {
-        this.companyNamesById = new Map(
-          this.getCompaniesFromResponse(response).map(company => [company.id, company.name])
-        );
-      },
-      error: (err) => console.error('Erro ao carregar empresas:', err)
-    });
   }
 
   loadSchedules(pageIndex: number = this.pageIndex, pageSize: number = this.pageSize): void {
@@ -77,20 +63,18 @@ export class ScheduleListComponent implements OnInit {
     }
   }
 
+  /** ["MON", …, "FRI"] → "Seg a Sex". */
   getWeekdaysLabel(weekdays: string[]): string {
-    return weekdays?.join(', ') || '-';
+    return formatWeekdays(weekdays);
   }
 
-  getCompanyLabel(companyId: number): string {
-    return this.companyNamesById.get(companyId) ?? String(companyId);
+  /** "06:30:00" → "06:30". */
+  getTimeLabel(time: string): string {
+    return (time ?? '').slice(0, 5) || '-';
   }
 
   private getSchedulesFromResponse(response: ScheduleListResponse | Schedule[]): Schedule[] {
     return extractPaginatedItems<Schedule>(response);
-  }
-
-  private getCompaniesFromResponse(response: CompanyListResponse | Company[]): Company[] {
-    return extractPaginatedItems<Company>(response);
   }
 
   private getTotalCountFromResponse(response: any, fallbackLength: number): number {
